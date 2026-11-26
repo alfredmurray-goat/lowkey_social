@@ -2,19 +2,20 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Bell,
   Bookmark,
+  CircleUserRound,
+  Clapperboard,
   Flame,
-  House,
-  MessageCircle,
-  Plus,
-  Play,
-  User,
+  Home,
+  MessageCircleHeart,
   Search,
+  SquarePlus,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useLowkey, useTodayUsage } from "@/lib/lowkey/store";
 import logoAsset from "@/assets/lowkey-logo.png.asset.json";
 import { ReadAloud } from "@/components/lowkey/readaloud";
+import { ScribbleLoader } from "@/components/lowkey/scribble-loader";
 
 export function Avatar({
   hue,
@@ -274,11 +275,11 @@ export function CookieBanner() {
 }
 
 const tabs = [
-  { to: "/app", label: "home", icon: House },
-  { to: "/app/chats", label: "chats", icon: MessageCircle },
-  { to: "/app/create", label: "create", icon: Plus },
-  { to: "/app/videos", label: "videos", icon: Play },
-  { to: "/app/profile", label: "profile", icon: User },
+  { to: "/app", label: "home", icon: Home },
+  { to: "/app/chats", label: "chats", icon: MessageCircleHeart },
+  { to: "/app/create", label: "create", icon: SquarePlus },
+  { to: "/app/videos", label: "videos", icon: Clapperboard },
+  { to: "/app/profile", label: "profile", icon: CircleUserRound },
 ] as const;
 
 export function BottomNav() {
@@ -294,17 +295,17 @@ export function BottomNav() {
                 to={to}
                 aria-label={label}
                 className={cn(
-                  "flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 px-1 transition-colors active:scale-95",
+                  "flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 px-1 transition-all duration-150 active:scale-90",
                   active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <span
                   className={cn(
-                    "flex size-7 items-center justify-center rounded-lg",
-                    active && "bg-secondary text-foreground",
+                    "flex h-8 w-12 items-center justify-center rounded-2xl transition-colors",
+                    active && "bg-primary text-primary-foreground shadow-xs",
                   )}
                 >
-                  <Icon className="size-5" />
+                  <Icon className="size-[21px]" strokeWidth={active ? 2.4 : 1.9} />
                 </span>
                  <span className={cn("lowkey truncate text-[10px]", active && "font-bold")}>{label}</span>
               </Link>
@@ -371,6 +372,10 @@ export function AppScreen({
       void navigate({ to: "/onboarding", replace: true });
       return;
     }
+    if (me.onboardingVersion < 2) {
+      void navigate({ to: "/onboarding", replace: true });
+      return;
+    }
     if (me.verificationStatus !== "verified" || !me.ageBand) {
       void navigate({ to: "/verify", replace: true });
     }
@@ -382,8 +387,8 @@ export function AppScreen({
     return () => window.clearInterval(id);
   }, [me, addUsageMinute]);
 
-  if (!me || me.verificationStatus !== "verified" || !me.ageBand) {
-    return <div className="min-h-screen bg-background" />;
+  if (loading || !me || me.verificationStatus !== "verified" || !me.ageBand) {
+    return <ScribbleLoader fullScreen label="loading lowkey…" />;
   }
 
   if (me.bannedAt) {
@@ -408,7 +413,7 @@ export function AppScreen({
       >
         skip to content
       </a>
-      <main id="main" className="min-w-0 flex-1">
+      <main id="main" className="lk-screen-in min-w-0 flex-1">
         {children}
       </main>
       <div className="h-[calc(4.5rem+env(safe-area-inset-bottom))]" aria-hidden />

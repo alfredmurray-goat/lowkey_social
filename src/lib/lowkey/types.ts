@@ -48,6 +48,21 @@ textScale: TextScale;
   /** band from the birthday the user typed; the face scan has to agree */
   claimedBand: AgeBand | null;
   bannedAt: string | null;
+  onboardingVersion: number;
+  school: string | null;
+  className: string | null;
+  guardianEmail: string | null;
+  heardFrom: string | null;
+  safetyPledgeAt: string | null;
+  cityKey: string | null;
+  mutedWords: string[];
+  mutedProfileIds: string[];
+  breakReminders: boolean;
+  hideReposts: boolean;
+  hideHashtags: boolean;
+  allowCommunityInvites: Audience;
+  showCity: "band" | "followers" | "nobody";
+  language: "en" | "da";
 }
 
 export type Audience = "everyone" | "followers" | "nobody";
@@ -74,8 +89,39 @@ export interface Post {
   sourcePostId?: string | null;
   taggedHandle: string | null;
   topic: string | null;
+  communityId?: string | null;
   ageBand: AgeBand;
   createdAt: string;
+}
+
+export interface Community {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  ageBand: AgeBand;
+  ownerId: string;
+  conversationId: string | null;
+  memberIds: string[];
+  inviteToken: string | null;
+  createdAt: string;
+}
+
+export interface SuperPost {
+  id: string;
+  authorId: string;
+  title: string | null;
+  body: string;
+  mediaUrl: string | null;
+  expiresAt: string | null;
+  pinned: boolean;
+  createdAt: string;
+}
+
+export interface PostHashtag {
+  postId: string;
+  tag: string;
+  ageBand: AgeBand;
 }
 
 export interface PostDraft {
@@ -153,6 +199,9 @@ export interface LowkeyState {
   messages: Message[];
   streaks: Streak[];
   usageDays: { profileId: string; day: string; minutes: number }[];
+  communities: Community[];
+  superPosts: SuperPost[];
+  hashtags: PostHashtag[];
   currentUserId: string | null;
 }
 
@@ -169,6 +218,9 @@ export const emptyState: LowkeyState = {
   messages: [],
   streaks: [],
   usageDays: [],
+  communities: [],
+  superPosts: [],
+  hashtags: [],
   currentUserId: null,
 };
 

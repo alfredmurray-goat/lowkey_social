@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BadgeCheck, Bookmark, Heart, MessageSquare, Music2, Play, Send, Volume2, VolumeX } from "lucide-react";
+import { BadgeCheck, Bookmark, Captions, Heart, MessageSquare, Music2, Play, Send, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AppScreen, Poster } from "@/components/lowkey/shell";
 import { CommentsSheet } from "@/components/lowkey/comments";
+import { CaptionText } from "@/components/lowkey/caption-text";
 import { useBandPosts, useLowkey } from "@/lib/lowkey/store";
 import type { Post } from "@/lib/lowkey/types";
 
@@ -31,18 +32,45 @@ function playableVideo(post: Post) {
 function VideoCard({
   post,
   muted,
+  showSubs,
   onToggleMute,
+  onToggleSubs,
   onComments,
 }: {
   post: Post;
   muted: boolean;
+  showSubs: boolean;
   onToggleMute: () => void;
+  onToggleSubs: () => void;
   onComments: () => void;
 }) {
   const { state, me, toggleLike, toggleFollow, toggleBookmark } = useLowkey();
   const ref = useRef<HTMLVideoElement | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [subLine, setSubLine] = useState("");
   const songRef = useRef<HTMLAudioElement | null>(null);
+
+  // Automatic timed subtitles generated from the video's caption
+  useEffect(() => {
+    if (!showSubs || !post.caption.trim()) {
+      setSubLine("");
+      return;
+    }
+    const words = post.caption.trim().split(/\s+/);
+    const chunks: string[] = [];
+    for (let i = 0; i < words.length; i += 6) {
+      chunks.push(words.slice(i, i + 6).join(" "));
+    }
+    if (chunks.length === 0) return;
+    let idx = 0;
+    setSubLine(chunks[0] ?? "");
+    if (chunks.length === 1) return;
+    const id = window.setInterval(() => {
+      idx = (idx + 1) % chunks.length;
+      setSubLine(chunks[idx] ?? "");
+    }, 2400);
+    return () => window.clearInterval(id);
+  }, [showSubs, post.caption]);
 
   // keep the song in step with the video: plays/pauses together, follows mute
   useEffect(() => {
@@ -127,6 +155,15 @@ function VideoCard({
             >
               {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
             </button>
+            <button
+              onClick={onToggleSubs}
+              aria-label={showSubs ? "hide subtitles" : "show subtitles"}
+              className={`absolute top-16 left-4 flex size-10 items-center justify-center rounded-full ${
+                showSubs ? "bg-primary text-primary-foreground" : "bg-background/80 text-foreground"
+              }`}
+            >
+              <Captions className="size-4" />
+            </button>
           </>
         ) : (
           <Poster hue={post.posterHue} caption={post.caption} aspect="tall" />
@@ -175,6 +212,14 @@ function VideoCard({
           </button>
         </div>
 
+        {showSubs && subLine && (
+          <div className="pointer-events-none absolute inset-x-6 bottom-32 flex justify-center">
+            <span className="lowkey rounded-xl bg-foreground/85 px-3.5 py-1.5 text-center text-sm font-bold text-background shadow-sm backdrop-blur-xs">
+              {subLine}
+            </span>
+          </div>
+        )}
+
         <div className="absolute inset-x-4 bottom-4 rounded-2xl bg-background/70 p-3 backdrop-blur">
           <div className="flex items-center gap-2">
             <Link {...authorLink} className="lowkey flex items-center gap-1 text-sm font-bold">
@@ -192,7 +237,11 @@ function VideoCard({
               </button>
             )}
           </div>
-          {post.caption && <p className="lowkey mt-1 text-xs">{post.caption}</p>}
+          {post.caption && (
+            <p className="lowkey mt-1 text-xs">
+              <CaptionText text={post.caption} />
+            </p>
+          )}
           {post.songTitle && (
             <div className="lowkey mt-2 text-xs">
               <p className="flex items-center gap-1.5"><Music2 className="size-3.5" />song playing is: <strong>{post.songTitle} — {post.songArtist}</strong></p>
@@ -206,14 +255,47 @@ function VideoCard({
 }
 
 function VideosPage() {
-  const videos = useBandPosts("video");
+  const { state, me } = useLowkey();
+  const allVideos = useBandPosts("video");
   const [muted, setMuted] = useState(true);
+  const [showSubs, setShowSubs] = useState(true);
+  const [selectedCommunity, setSelectedCommunity] = useState<string>("all");
   const [openComments, setOpenComments] = useState<string | null>(null);
+
+  const myCommunities = state.communities.filter((c) => me && c.memberIds.includes(me.id));
+  const videos = allVideos.filter((v) =>
+    selectedCommunity === "all"
+      ? !v.communityId || myCommunities.some((c) => c.id === v.communityId)
+      : v.communityId === selectedCommunity,
+  );
 
   return (
     <AppScreen>
       <h1 className="sr-only">lowkey videos</h1>
-      <div className="h-[calc(100vh-9rem)] snap-y snap-mandatory overflow-y-auto">
+      {myCommunities.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto px-4 py-2">
+          <button
+            onClick={() => setSelectedCommunity("all")}
+            className={`lowkey shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold ${
+              selectedCommunity === "all" ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
+            }`}
+          >
+            all
+          </button>
+          {myCommunities.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setSelectedCommunity(c.id)}
+              className={`lowkey shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold ${
+                selectedCommunity === c.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {c.emoji} {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="h-[calc(100vh-11rem)] snap-y snap-mandatory overflow-y-auto">
         {videos.length === 0 && (
           <p className="lowkey p-8 text-center text-sm text-muted-foreground">
             no videos in your band yet. record one.
@@ -224,7 +306,9 @@ function VideosPage() {
             key={v.id}
             post={v}
             muted={muted}
+            showSubs={showSubs}
             onToggleMute={() => setMuted((m) => !m)}
+            onToggleSubs={() => setShowSubs((s) => !s)}
             onComments={() => setOpenComments(v.id)}
           />
         ))}

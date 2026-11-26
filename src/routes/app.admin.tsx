@@ -21,7 +21,7 @@ export const Route = createFileRoute("/app/admin")({
   component: AdminPage,
 });
 
-type Tab = "overview" | "reports" | "users" | "feeds";
+type Tab = "overview" | "reports" | "users" | "feeds" | "super";
 interface Report {
   id: string;
   reporter_id: string;
@@ -33,12 +33,28 @@ interface Report {
 }
 
 function AdminPage() {
-  const { isAdmin, loading, state, refresh, deletePost, deleteComment } = useLowkey();
+  const {
+    isAdmin,
+    loading,
+    state,
+    refresh,
+    deletePost,
+    deleteComment,
+    uploadMedia,
+    createSuperPost,
+    toggleSuperPostPin,
+    deleteSuperPost,
+  } = useLowkey();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("overview");
   const [reports, setReports] = useState<Report[]>([]);
   const [q, setQ] = useState("");
   const [band, setBand] = useState<AgeBand>("under_18");
+  const [superTitle, setSuperTitle] = useState("");
+  const [superBody, setSuperBody] = useState("");
+  const [superExpires, setSuperExpires] = useState("");
+  const [superFile, setSuperFile] = useState<File | null>(null);
+  const [superBusy, setSuperBusy] = useState(false);
   const del = useServerFn(adminDeleteAccount);
 
   useEffect(() => {
@@ -121,7 +137,7 @@ function AdminPage() {
       <div className="px-4 pt-5">
         <h1 className="lowkey text-2xl font-extrabold">admin</h1>
         <div className="mt-3 flex gap-1 overflow-x-auto rounded-full bg-muted p-1">
-          {(["overview", "reports", "users", "feeds"] as const).map((t) => (
+          {(["overview", "reports", "users", "feeds", "super"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -129,12 +145,110 @@ function AdminPage() {
                 tab === t ? "bg-background shadow-sm" : "text-muted-foreground"
               }`}
             >
-              {t}
+              {t === "super" ? "super posts" : t}
               {t === "reports" && open.length > 0 ? ` (${open.length})` : ""}
             </button>
           ))}
         </div>
       </div>
+
+      {tab === "super" && (
+        <div className="flex flex-col gap-4 p-4">
+          <div className="flex flex-col gap-3 rounded-3xl border border-border bg-card p-4">
+            <p className="lowkey text-sm font-bold">new super post (shown at top of both bands)</p>
+            <input
+              value={superTitle}
+              onChange={(e) => setSuperTitle(e.target.value)}
+              placeholder="headline (optional)"
+              className="lowkey w-full rounded-2xl border border-input bg-background px-3 py-2.5 text-sm outline-none"
+            />
+            <textarea
+              value={superBody}
+              onChange={(e) => setSuperBody(e.target.value)}
+              rows={3}
+              placeholder="announcement for everyone on lowkey_social…"
+              className="lowkey w-full resize-none rounded-2xl border border-input bg-background px-3 py-2.5 text-sm outline-none"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <label className="lowkey flex flex-col gap-1 text-xs text-muted-foreground">
+                <span>optional image</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setSuperFile(e.target.files?.[0] ?? null)}
+                  className="text-xs"
+                />
+              </label>
+              <label className="lowkey flex flex-col gap-1 text-xs text-muted-foreground">
+                <span>end date (optional)</span>
+                <input
+                  type="datetime-local"
+                  value={superExpires}
+                  onChange={(e) => setSuperExpires(e.target.value)}
+                  className="rounded-xl border border-input bg-background px-2 py-1.5 text-xs"
+                />
+              </label>
+            </div>
+            <button
+              disabled={superBusy || !superBody.trim()}
+              onClick={async () => {
+                setSuperBusy(true);
+                let mediaPath: string | null = null;
+                if (superFile) {
+                  const up = await uploadMedia(superFile);
+                  mediaPath = up?.path ?? null;
+                }
+                const ok = await createSuperPost({
+                  title: superTitle,
+                  body: superBody,
+                  mediaUrl: mediaPath,
+                  expiresAt: superExpires ? new Date(superExpires).toISOString() : null,
+                });
+                setSuperBusy(false);
+                if (ok) {
+                  setSuperTitle("");
+                  setSuperBody("");
+                  setSuperExpires("");
+                  setSuperFile(null);
+                  toast.success("super post pinned");
+                }
+              }}
+              className="lowkey rounded-full bg-primary py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+            >
+              {superBusy ? "posting…" : "pin super post"}
+            </button>
+          </div>
+
+          {state.superPosts.map((sp) => (
+            <div key={sp.id} className="flex flex-col gap-2 rounded-3xl border border-border bg-card p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="lowkey rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">
+                  {sp.pinned ? "pinned" : "unpinned"}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => void toggleSuperPostPin(sp.id, !sp.pinned)}
+                    className="lowkey rounded-full border border-border px-3 py-1 text-xs font-semibold"
+                  >
+                    {sp.pinned ? "unpin" : "pin"}
+                  </button>
+                  <button
+                    onClick={() => void deleteSuperPost(sp.id)}
+                    className="lowkey rounded-full border border-destructive/40 px-3 py-1 text-xs font-semibold text-destructive"
+                  >
+                    delete
+                  </button>
+                </div>
+              </div>
+              {sp.title && <p className="lowkey font-bold">{sp.title}</p>}
+              <p className="lowkey text-sm text-muted-foreground">{sp.body}</p>
+              {sp.mediaUrl && (
+                <img src={sp.mediaUrl} alt="" className="max-h-48 w-full rounded-2xl object-cover" />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {tab === "overview" && (
         <div className="grid grid-cols-2 gap-3 p-4">

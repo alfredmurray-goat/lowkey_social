@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { Hash } from "lucide-react";
 import { AppScreen, Avatar } from "@/components/lowkey/shell";
 import { useBandPosts, useBandProfiles, useLowkey } from "@/lib/lowkey/store";
 
@@ -20,10 +21,23 @@ export const Route = createFileRoute("/app/search")({
 
 function SearchPage() {
   const [q, setQ] = useState("");
+  const [tab, setTab] = useState<"all" | "tags">("all");
   const profiles = useBandProfiles();
   const posts = useBandPosts();
   const { me, toggleFollow, state } = useLowkey();
-  const term = q.trim().toLowerCase();
+  const term = q.trim().toLowerCase().replace(/^#/, "");
+
+  // Trending hashtags in your age band
+  const tagCounts = new Map<string, number>();
+  for (const h of state.hashtags) {
+    if (me?.ageBand && h.ageBand === me.ageBand) {
+      tagCounts.set(h.tag, (tagCounts.get(h.tag) ?? 0) + 1);
+    }
+  }
+  const trendingTags = [...tagCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .filter(([t]) => !term || t.includes(term))
+    .slice(0, 16);
 
   const people = term
     ? profiles.filter(
@@ -38,11 +52,58 @@ function SearchPage() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="search people or posts"
+          placeholder="search people, posts or #tags"
           className="lowkey w-full rounded-full border border-border bg-card px-4 py-3 text-sm outline-none"
         />
 
-        <h1 className="lowkey mt-5 text-sm font-bold">people in your band</h1>
+        <div className="mt-3 flex gap-1 rounded-full bg-muted p-1">
+          {(
+            [
+              ["all", "people & posts"],
+              ["tags", "#tags"],
+            ] as const
+          ).map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => setTab(k)}
+              className={`lowkey flex-1 rounded-full py-2 text-xs font-bold ${
+                tab === k ? "bg-background shadow-xs" : "text-muted-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {trendingTags.length > 0 && (
+          <div className="mt-4">
+            <p className="lowkey text-xs font-bold text-muted-foreground">trending in your band</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {trendingTags.map(([tag, count]) => (
+                <Link
+                  key={tag}
+                  to="/app/tag/$tag"
+                  params={{ tag }}
+                  className="lowkey inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-primary-soft"
+                >
+                  <Hash className="size-3 text-primary" />
+                  {tag}
+                  <span className="text-[10px] text-muted-foreground">{count}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab === "tags" ? (
+          trendingTags.length === 0 ? (
+            <p className="lowkey mt-8 text-center text-xs text-muted-foreground">
+              no hashtags in your band yet — add #tags to your next post!
+            </p>
+          ) : null
+        ) : (
+          <>
+            <h1 className="lowkey mt-5 text-sm font-bold">people in your band</h1>
         <ul className="mt-2 flex flex-col gap-2">
           {people.length === 0 && (
             <li className="lowkey text-xs text-muted-foreground">nobody matches that</li>
@@ -88,6 +149,8 @@ function SearchPage() {
                 </li>
               ))}
             </ul>
+          </>
+        )}
           </>
         )}
       </div>

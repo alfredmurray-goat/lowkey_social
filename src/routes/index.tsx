@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Flame, MapPin, MessageCircle, ScanFace, ShieldCheck, Timer } from "lucide-react";
 import { BetaTag, LowkeyMark, SiteFooter } from "@/components/lowkey/shell";
+import { useLowkey } from "@/lib/lowkey/store";
 
 const SITE = "https://lowkeysocial.alfredmurray.com";
 
@@ -69,6 +70,19 @@ const features = [
 ];
 
 function Landing() {
+  const { me, loading } = useLowkey();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      Boolean((window.navigator as { standalone?: boolean }).standalone);
+    if (isStandalone || (!loading && me)) {
+      void navigate({ to: "/app", replace: true });
+    }
+  }, [me, loading, navigate]);
+
   return (
     <div className="min-h-screen overflow-x-clip bg-background">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">

@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Flag, Heart, MessageSquare, MoreHorizontal, Pencil, Send, Bookmark, Trash2, X, Music2, Maximize2 } from "lucide-react";
+import { Flag, Heart, MessageSquare, MoreHorizontal, Pencil, Send, Bookmark, Trash2, X, Music2, Maximize2, Megaphone, Plus, QrCode } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AppScreen, Avatar, Poster } from "@/components/lowkey/shell";
 import { CommentsSheet } from "@/components/lowkey/comments";
+import { CaptionText } from "@/components/lowkey/caption-text";
 import { useBandPosts, useBandProfiles, useLowkey } from "@/lib/lowkey/store";
+import { sameCity } from "@/lib/lowkey/city";
 import type { Post } from "@/lib/lowkey/types";
 import { Button } from "@/components/ui/button";
 
@@ -393,18 +395,162 @@ function FullscreenPhoto({ post, authorHandle, liked, saved, likeCount, onClose,
 }
 
 function FeedPage() {
-  const posts = useBandPosts('post');
+  const { state, me, createCommunity } = useLowkey();
+  const bandPosts = useBandPosts();
+  const [selectedCommunity, setSelectedCommunity] = useState<string>("all");
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmoji, setNewEmoji] = useState("🏫");
+
+  const myCommunities = state.communities.filter((c) => me && c.memberIds.includes(me.id));
+  const activeSuperPosts = state.superPosts.filter(
+    (sp) => sp.pinned && (!sp.expiresAt || new Date(sp.expiresAt).getTime() > Date.now()),
+  );
+
+  const mutedWords = (me?.mutedWords ?? []).map((w) => w.toLowerCase()).filter(Boolean);
+  const mutedProfiles = new Set(me?.mutedProfileIds ?? []);
+
+  const visiblePosts = bandPosts.filter((p) => {
+    if (p.kind === "video") return false;
+    if (me?.hideReposts && p.kind === "repost") return false;
+    if (mutedProfiles.has(p.authorId)) return false;
+    if (mutedWords.length > 0) {
+      const hay = `${p.title ?? ""} ${p.caption}`.toLowerCase();
+      if (mutedWords.some((w) => hay.includes(w))) return false;
+    }
+    if (selectedCommunity === "all") {
+      return !p.communityId || myCommunities.some((c) => c.id === p.communityId);
+    }
+    return p.communityId === selectedCommunity;
+  });
+
+  const activeComm = myCommunities.find((c) => c.id === selectedCommunity);
 
   return (
     <AppScreen>
       <h1 className="sr-only">lowkey_social feed</h1>
-      <NearYou />
-      {posts.length === 0 ? (
-        <p className="lowkey p-8 text-center text-sm text-muted-foreground">
-          nothing in your feed yet. make the first post.
-        </p>
+
+      {activeSuperPosts.length > 0 && (
+        <div className="flex flex-col gap-2 px-4 pt-4">
+          {activeSuperPosts.map((sp) => (
+            <div
+              key={sp.id}
+              className="rounded-3xl border border-primary/40 bg-primary-soft/60 p-4 shadow-xs"
+            >
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">
+                <Megaphone className="size-3" /> from lowkey_social
+              </span>
+              {sp.title && <p className="lowkey mt-2 text-base font-extrabold">{sp.title}</p>}
+              <p className="lowkey mt-1 text-sm text-foreground/90">{sp.body}</p>
+              {sp.mediaUrl && (
+                <img
+                  src={sp.mediaUrl}
+                  alt={sp.title ?? "announcement"}
+                  className="mt-3 max-h-64 w-full rounded-2xl object-cover"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 overflow-x-auto px-4 pt-4 pb-1">
+        <button
+          onClick={() => setSelectedCommunity("all")}
+          className={`lowkey shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-colors ${
+            selectedCommunity === "all"
+              ? "bg-foreground text-background"
+              : "bg-muted text-muted-foreground"
+          }`}
+        >
+          all
+        </button>
+        {myCommunities.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => setSelectedCommunity(c.id)}
+            className={`lowkey shrink-0 rounded-full px-3.5 py-2 text-xs font-bold transition-colors ${
+              selectedCommunity === c.id
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {c.emoji} {c.name}
+          </button>
+        ))}
+        <button
+          onClick={() => setCreating((v) => !v)}
+          className="lowkey inline-flex shrink-0 items-center gap-1 rounded-full border border-dashed border-border px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
+        >
+          <Plus className="size-3.5" /> new community
+        </button>
+      </div>
+
+      {creating && (
+        <div className="mx-4 mt-2 flex flex-col gap-2 rounded-3xl border border-border bg-card p-4">
+          <p className="lowkey text-xs font-bold text-muted-foreground">start a class or friend community</p>
+          <div className="flex gap-2">
+            <input
+              value={newEmoji}
+              onChange={(e) => setNewEmoji(e.target.value)}
+              className="w-12 rounded-2xl border border-input bg-background text-center text-lg outline-none"
+              aria-label="emoji"
+            />
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="e.g. 7b class"
+              className="lowkey flex-1 rounded-2xl border border-input bg-background px-3 py-2 text-sm outline-none"
+            />
+            <button
+              disabled={!newName.trim()}
+              onClick={async () => {
+                const cid = await createCommunity(newName, newEmoji);
+                if (cid) {
+                  setNewName("");
+                  setCreating(false);
+                  setSelectedCommunity(cid);
+                }
+              }}
+              className="lowkey rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
+            >
+              create
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeComm && (
+        <div className="mx-4 mt-2 flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-2.5">
+          <span className="lowkey text-xs font-bold">
+            {activeComm.emoji} {activeComm.name} · {activeComm.memberIds.length} members
+          </span>
+          <Link
+            to="/app/community/$id"
+            params={{ id: activeComm.id }}
+            className="lowkey inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground"
+          >
+            <QrCode className="size-3.5" /> invite &amp; manage
+          </Link>
+        </div>
+      )}
+
+      {selectedCommunity === "all" && <NearYou />}
+      {visiblePosts.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 p-10 text-center">
+          <p className="lowkey text-sm font-bold">nothing here yet</p>
+          <p className="lowkey text-xs text-muted-foreground">
+            {activeComm ? `be the first to post in ${activeComm.name}.` : "make the first post in your band."}
+          </p>
+          <Link
+            to="/app/create"
+            className="lowkey mt-1 rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground"
+          >
+            create a post
+          </Link>
+        </div>
       ) : (
-        posts.map((p) => <FeedCard key={p.id} post={p} />)
+        visiblePosts.map((p) => <FeedCard key={p.id} post={p} />)
       )}
     </AppScreen>
   );
@@ -424,7 +570,7 @@ function NearYou() {
           !p.hideFromSearch &&
           !p.bannedAt &&
           !state.blocks.includes(p.id) &&
-          p.city?.trim().toLowerCase() === city,
+          sameCity(p.city, me.city),
       )
     : [];
 

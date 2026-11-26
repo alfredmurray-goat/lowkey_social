@@ -37,6 +37,9 @@ import { Route as AppVideosRouteImport } from './routes/app.videos'
 import { Route as ChatIdRouteImport } from './routes/chat.$id'
 import { Route as UHandleRouteImport } from './routes/u.$handle'
 import { Route as AppChatIdRouteImport } from './routes/app.chat.$id'
+import { Route as AppCommunityIdRouteImport } from './routes/app.community.$id'
+import { Route as AppJoinTokenRouteImport } from './routes/app.join.$token'
+import { Route as AppTagTagRouteImport } from './routes/app.tag.$tag'
 import { Route as AppUHandleRouteImport } from './routes/app.u.$handle'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
@@ -182,6 +185,21 @@ const AppChatIdRoute = AppChatIdRouteImport.update({
   path: '/app/chat/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppCommunityIdRoute = AppCommunityIdRouteImport.update({
+  id: '/app/community/$id',
+  path: '/app/community/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppJoinTokenRoute = AppJoinTokenRouteImport.update({
+  id: '/app/join/$token',
+  path: '/app/join/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppTagTagRoute = AppTagTagRouteImport.update({
+  id: '/app/tag/$tag',
+  path: '/app/tag/$tag',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppUHandleRoute = AppUHandleRouteImport.update({
   id: '/app/u/$handle',
   path: '/app/u/$handle',
@@ -233,6 +251,9 @@ export interface FileRoutesByFullPath {
   '/u/$handle': typeof UHandleRoute
   '/app/': typeof AppIndexRoute
   '/app/chat/$id': typeof AppChatIdRoute
+  '/app/community/$id': typeof AppCommunityIdRoute
+  '/app/join/$token': typeof AppJoinTokenRoute
+  '/app/tag/$tag': typeof AppTagTagRoute
   '/app/u/$handle': typeof AppUHandleRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -267,6 +288,9 @@ export interface FileRoutesByTo {
   '/u/$handle': typeof UHandleRoute
   '/app': typeof AppIndexRoute
   '/app/chat/$id': typeof AppChatIdRoute
+  '/app/community/$id': typeof AppCommunityIdRoute
+  '/app/join/$token': typeof AppJoinTokenRoute
+  '/app/tag/$tag': typeof AppTagTagRoute
   '/app/u/$handle': typeof AppUHandleRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -302,6 +326,9 @@ export interface FileRoutesById {
   '/u/$handle': typeof UHandleRoute
   '/app/': typeof AppIndexRoute
   '/app/chat/$id': typeof AppChatIdRoute
+  '/app/community/$id': typeof AppCommunityIdRoute
+  '/app/join/$token': typeof AppJoinTokenRoute
+  '/app/tag/$tag': typeof AppTagTagRoute
   '/app/u/$handle': typeof AppUHandleRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -338,6 +365,9 @@ export interface FileRouteTypes {
     | '/u/$handle'
     | '/app/'
     | '/app/chat/$id'
+    | '/app/community/$id'
+    | '/app/join/$token'
+    | '/app/tag/$tag'
     | '/app/u/$handle'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -372,6 +402,9 @@ export interface FileRouteTypes {
     | '/u/$handle'
     | '/app'
     | '/app/chat/$id'
+    | '/app/community/$id'
+    | '/app/join/$token'
+    | '/app/tag/$tag'
     | '/app/u/$handle'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -406,6 +439,9 @@ export interface FileRouteTypes {
     | '/u/$handle'
     | '/app/'
     | '/app/chat/$id'
+    | '/app/community/$id'
+    | '/app/join/$token'
+    | '/app/tag/$tag'
     | '/app/u/$handle'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -441,6 +477,9 @@ export interface RootRouteChildren {
   UHandleRoute: typeof UHandleRoute
   AppIndexRoute: typeof AppIndexRoute
   AppChatIdRoute: typeof AppChatIdRoute
+  AppCommunityIdRoute: typeof AppCommunityIdRoute
+  AppJoinTokenRoute: typeof AppJoinTokenRoute
+  AppTagTagRoute: typeof AppTagTagRoute
   AppUHandleRoute: typeof AppUHandleRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -645,6 +684,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppChatIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/community/$id': {
+      id: '/app/community/$id'
+      path: '/app/community/$id'
+      fullPath: '/app/community/$id'
+      preLoaderRoute: typeof AppCommunityIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/join/$token': {
+      id: '/app/join/$token'
+      path: '/app/join/$token'
+      fullPath: '/app/join/$token'
+      preLoaderRoute: typeof AppJoinTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/tag/$tag': {
+      id: '/app/tag/$tag'
+      path: '/app/tag/$tag'
+      fullPath: '/app/tag/$tag'
+      preLoaderRoute: typeof AppTagTagRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/u/$handle': {
       id: '/app/u/$handle'
       path: '/app/u/$handle'
@@ -705,6 +765,9 @@ const rootRouteChildren: RootRouteChildren = {
   UHandleRoute: UHandleRoute,
   AppIndexRoute: AppIndexRoute,
   AppChatIdRoute: AppChatIdRoute,
+  AppCommunityIdRoute: AppCommunityIdRoute,
+  AppJoinTokenRoute: AppJoinTokenRoute,
+  AppTagTagRoute: AppTagTagRoute,
   AppUHandleRoute: AppUHandleRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,

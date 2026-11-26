@@ -181,6 +181,10 @@ function SettingsPage() {
   const [city, setCity] = useState(me?.city ?? "");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [settingsSearch, setSettingsSearch] = useState("");
+  const [muteWordInput, setMuteWordInput] = useState("");
+  const [school, setSchool] = useState(me?.school ?? "");
+  const [className, setClassName] = useState(me?.className ?? "");
 
   const igRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState<{ done: number; total: number } | null>(null);
@@ -245,6 +249,184 @@ function SettingsPage() {
           <h1 className="lowkey text-xl font-bold">settings</h1>
           <BetaTag />
         </div>
+
+        <input
+          value={settingsSearch}
+          onChange={(e) => setSettingsSearch(e.target.value)}
+          placeholder="search settings (e.g. muted words, city, communities, language)…"
+          className={inputCls}
+        />
+
+        {/* feed, muted words, break reminders & language */}
+        {(!settingsSearch ||
+          "feed muted words break reminders reposts hashtags language communities school class city"
+            .includes(settingsSearch.toLowerCase())) && (
+          <Section icon={<ShieldCheck className="size-4 text-primary" />} title="feed, safety & communities">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="lowkey text-sm font-semibold">break reminders</p>
+                  <p className="lowkey text-xs text-muted-foreground">gentle nudge after scrolling a while</p>
+                </div>
+                <button
+                  onClick={() => void save({ breakReminders: !me.breakReminders })}
+                  className={`lowkey rounded-full px-3.5 py-1.5 text-xs font-bold ${
+                    me.breakReminders ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {me.breakReminders ? "on" : "off"}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <p className="lowkey text-sm font-semibold">hide reposts in feed</p>
+                <button
+                  onClick={() => void save({ hideReposts: !me.hideReposts })}
+                  className={`lowkey rounded-full px-3.5 py-1.5 text-xs font-bold ${
+                    me.hideReposts ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {me.hideReposts ? "on" : "off"}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <p className="lowkey text-sm font-semibold">hide #hashtags in captions</p>
+                <button
+                  onClick={() => void save({ hideHashtags: !me.hideHashtags })}
+                  className={`lowkey rounded-full px-3.5 py-1.5 text-xs font-bold ${
+                    me.hideHashtags ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {me.hideHashtags ? "on" : "off"}
+                </button>
+              </div>
+
+              <Field label="who can invite me to communities">
+                <div className="flex gap-2">
+                  {audiences.map((a) => (
+                    <button
+                      key={a}
+                      onClick={() => void save({ allowCommunityInvites: a })}
+                      className={`lowkey flex-1 rounded-full py-2 text-xs font-bold ${
+                        me.allowCommunityInvites === a
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {a}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              <Field label="who can see my city">
+                <div className="flex gap-2">
+                  {(["band", "followers", "nobody"] as const).map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => void save({ showCity: opt })}
+                      className={`lowkey flex-1 rounded-full py-2 text-xs font-bold ${
+                        me.showCity === opt
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {opt === "band" ? "my band" : opt}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              <Field label="language">
+                <div className="flex gap-2">
+                  {(
+                    [
+                      ["en", "english"],
+                      ["da", "dansk"],
+                    ] as const
+                  ).map(([code, label]) => (
+                    <button
+                      key={code}
+                      onClick={() => void save({ language: code })}
+                      className={`lowkey flex-1 rounded-full py-2 text-xs font-bold ${
+                        me.language === code
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              <Field label="muted words (hides matching posts)">
+                <div className="flex gap-2">
+                  <input
+                    value={muteWordInput}
+                    onChange={(e) => setMuteWordInput(e.target.value)}
+                    placeholder="add a word to mute"
+                    className={inputCls}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const w = muteWordInput.trim().toLowerCase();
+                      if (!w || me.mutedWords.includes(w)) return;
+                      setMuteWordInput("");
+                      void save({ mutedWords: [...me.mutedWords, w] }, "word muted");
+                    }}
+                    className="lowkey shrink-0 rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground"
+                  >
+                    add
+                  </button>
+                </div>
+                {me.mutedWords.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {me.mutedWords.map((w) => (
+                      <button
+                        key={w}
+                        onClick={() =>
+                          void save(
+                            { mutedWords: me.mutedWords.filter((x) => x !== w) },
+                            "word unmuted",
+                          )
+                        }
+                        className="lowkey rounded-full bg-muted px-3 py-1 text-xs font-semibold"
+                      >
+                        {w} ×
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </Field>
+
+              {me.ageBand === "under_18" && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="school">
+                    <input
+                      className={inputCls}
+                      value={school}
+                      onChange={(e) => setSchool(e.target.value)}
+                      onBlur={() => void save({ school: school.trim() || null })}
+                      placeholder="optional"
+                    />
+                  </Field>
+                  <Field label="class">
+                    <input
+                      className={inputCls}
+                      value={className}
+                      onChange={(e) => setClassName(e.target.value)}
+                      onBlur={() => void save({ className: className.trim() || null })}
+                      placeholder="e.g. 7b"
+                    />
+                  </Field>
+                </div>
+              )}
+            </div>
+          </Section>
+        )}
 
         {/* profile */}
         <Section icon={<User className="size-4 text-primary" />} title="profile">

@@ -70,7 +70,15 @@ function OnboardingPage() {
   const [contentPace, setContentPace] = useState("balanced");
   const [quietHours, setQuietHours] = useState(true);
   const [dailyLimitMinutes, setDailyLimitMinutes] = useState(45);
+  const [school, setSchool] = useState("");
+  const [className, setClassName] = useState("");
+  const [guardianEmail, setGuardianEmail] = useState("");
+  const [heardFrom, setHeardFrom] = useState("");
+  const [pledge, setPledge] = useState(false);
   const [terms, setTerms] = useState(false);
+
+  const isCatchUp = Boolean(me && me.onboardedAt && me.onboardingVersion < 2);
+  const showUnder18Fields = !me?.ageBand || me.ageBand === "under_18";
 
   useEffect(() => {
     if (loading) return;
@@ -78,7 +86,7 @@ function OnboardingPage() {
       void navigate({ to: "/auth", replace: true });
       return;
     }
-    if (me && me.onboardedAt && me.verificationStatus === "verified" && me.ageBand) {
+    if (me && me.onboardedAt && me.onboardingVersion >= 2 && me.verificationStatus === "verified" && me.ageBand) {
       void navigate({ to: "/app", replace: true });
     }
   }, [me, needsProfile, loading, navigate]);
@@ -147,11 +155,27 @@ function OnboardingPage() {
   };
 
   const goVerify = async () => {
+    if (!pledge) {
+      toast.error("tick the safety pledge first");
+      return;
+    }
     if (!terms) {
       toast.error("tick the box first");
       return;
     }
     setBusy(true);
+    await updateProfile({
+      ...(showUnder18Fields
+        ? {
+            school: school.trim() || null,
+            className: className.trim() || null,
+            guardianEmail: guardianEmail.trim() || null,
+          }
+        : {}),
+      heardFrom: heardFrom || null,
+      safetyPledgeAt: new Date().toISOString(),
+      onboardingVersion: 2,
+    });
     await recordConsent("terms_and_privacy");
     const res = await finishOnboarding();
     setBusy(false);
@@ -162,6 +186,122 @@ function OnboardingPage() {
     if (typeof window !== "undefined") window.sessionStorage.removeItem(STEP_KEY);
     void navigate({ to: "/verify" });
   };
+
+  const saveCatchUp = async () => {
+    if (!pledge) {
+      toast.error("tick the safety pledge first");
+      return;
+    }
+    setBusy(true);
+    const res = await updateProfile({
+      ...(showUnder18Fields
+        ? {
+            school: school.trim() || null,
+            className: className.trim() || null,
+            guardianEmail: guardianEmail.trim() || null,
+          }
+        : {}),
+      heardFrom: heardFrom || null,
+      safetyPledgeAt: new Date().toISOString(),
+      onboardingVersion: 2,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      toast.error(res.error ?? "couldn't save that");
+      return;
+    }
+    toast.success("all updated");
+    void navigate({ to: "/app", replace: true });
+  };
+
+  const heardOptions = ["a friend", "school / class", "tiktok / reels", "search", "other"];
+
+  if (isCatchUp) {
+    return (
+      <div className="mx-auto flex min-h-screen w-full max-w-lg flex-col gap-5 px-6 py-10">
+        <div className="flex items-center gap-3">
+          <LowkeyMark size={36} />
+          <BetaTag />
+        </div>
+        <h1 className="lowkey text-2xl font-extrabold">a few quick new questions</h1>
+        <p className="lowkey text-sm text-muted-foreground">
+          we updated lowkey_social — answer these quick bits and you&apos;re straight back to your feed.
+        </p>
+
+        {showUnder18Fields && (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="school (optional)">
+                <input
+                  value={school}
+                  onChange={(e) => setSchool(e.target.value)}
+                  placeholder="østerbro skole"
+                  className="lowkey w-full rounded-2xl border border-input bg-card px-4 py-3 outline-none"
+                />
+              </Field>
+              <Field label="class / year (optional)">
+                <input
+                  value={className}
+                  onChange={(e) => setClassName(e.target.value)}
+                  placeholder="7b"
+                  className="lowkey w-full rounded-2xl border border-input bg-card px-4 py-3 outline-none"
+                />
+              </Field>
+            </div>
+            <Field label="parent / guardian email (optional)">
+              <input
+                type="email"
+                value={guardianEmail}
+                onChange={(e) => setGuardianEmail(e.target.value)}
+                placeholder="parent@example.com"
+                className="lowkey w-full rounded-2xl border border-input bg-card px-4 py-3 outline-none"
+              />
+            </Field>
+          </>
+        )}
+
+        <Field label="how did you hear about lowkey?">
+          <div className="flex flex-wrap gap-2">
+            {heardOptions.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => setHeardFrom(opt)}
+                className={`lowkey rounded-full px-3.5 py-2 text-xs font-semibold ${
+                  heardFrom === opt
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </Field>
+
+        <label className="lowkey flex min-h-11 cursor-pointer items-start gap-3 rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={pledge}
+            onChange={(e) => setPledge(e.target.checked)}
+            className="mt-0.5 size-6 shrink-0 accent-[hsl(var(--primary))]"
+          />
+          <span>
+            safety pledge: i&apos;ll be kind to people here and never share home addresses, phone numbers,
+            or private info.
+          </span>
+        </label>
+
+        <button
+          onClick={() => void saveCatchUp()}
+          disabled={busy}
+          className="lowkey flex items-center justify-center gap-1 rounded-full bg-primary py-3.5 text-sm font-bold text-primary-foreground disabled:opacity-60"
+        >
+          {busy ? "saving…" : "back to feed"} <ArrowRight className="size-4" />
+        </button>
+      </div>
+    );
+  }
 
   const steps = ["you", "what you're into", "how it feels", "age check"];
 
@@ -353,6 +493,58 @@ function OnboardingPage() {
 
       {step === 3 && (
         <div className="flex flex-col gap-5">
+          {showUnder18Fields && (
+            <div className="flex flex-col gap-3 rounded-3xl border border-border bg-card p-4">
+              <p className="lowkey text-sm font-bold">school &amp; safety (under 18)</p>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="school (optional)">
+                  <input
+                    value={school}
+                    onChange={(e) => setSchool(e.target.value)}
+                    placeholder="østerbro skole"
+                    className="lowkey w-full rounded-2xl border border-input bg-background px-3 py-2.5 text-sm outline-none"
+                  />
+                </Field>
+                <Field label="class (optional)">
+                  <input
+                    value={className}
+                    onChange={(e) => setClassName(e.target.value)}
+                    placeholder="7b"
+                    className="lowkey w-full rounded-2xl border border-input bg-background px-3 py-2.5 text-sm outline-none"
+                  />
+                </Field>
+              </div>
+              <Field label="parent / guardian email (optional)">
+                <input
+                  type="email"
+                  value={guardianEmail}
+                  onChange={(e) => setGuardianEmail(e.target.value)}
+                  placeholder="parent@example.com"
+                  className="lowkey w-full rounded-2xl border border-input bg-background px-3 py-2.5 text-sm outline-none"
+                />
+              </Field>
+            </div>
+          )}
+
+          <Field label="how did you hear about us?">
+            <div className="flex flex-wrap gap-2">
+              {heardOptions.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setHeardFrom(opt)}
+                  className={`lowkey rounded-full px-3.5 py-2 text-xs font-semibold ${
+                    heardFrom === opt
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </Field>
+
           <div className="rounded-3xl border border-border bg-card p-4">
             <p className="lowkey flex items-center gap-2 text-sm font-bold">
               <ShieldCheck className="size-4 text-primary" /> last bit: your age band
@@ -363,6 +555,19 @@ function OnboardingPage() {
               check runs in your browser and uploads nothing.
             </p>
           </div>
+
+          <label className="lowkey flex min-h-11 cursor-pointer items-start gap-3 rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={pledge}
+              onChange={(e) => setPledge(e.target.checked)}
+              className="mt-0.5 size-6 shrink-0 accent-[hsl(var(--primary))]"
+            />
+            <span>
+              safety pledge: i&apos;ll be kind to people here and never share home addresses, phone
+              numbers, or private info.
+            </span>
+          </label>
 
           <label className="lowkey flex min-h-11 cursor-pointer items-start gap-3 rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
             <input

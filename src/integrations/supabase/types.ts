@@ -80,6 +80,132 @@ export type Database = {
           },
         ]
       }
+      communities: {
+        Row: {
+          age_band: Database["public"]["Enums"]["age_band"]
+          conversation_id: string | null
+          created_at: string
+          description: string
+          emoji: string
+          id: string
+          name: string
+          owner_id: string
+        }
+        Insert: {
+          age_band: Database["public"]["Enums"]["age_band"]
+          conversation_id?: string | null
+          created_at?: string
+          description?: string
+          emoji?: string
+          id?: string
+          name: string
+          owner_id: string
+        }
+        Update: {
+          age_band?: Database["public"]["Enums"]["age_band"]
+          conversation_id?: string | null
+          created_at?: string
+          description?: string
+          emoji?: string
+          id?: string
+          name?: string
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communities_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communities_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_invites: {
+        Row: {
+          community_id: string
+          created_at: string
+          created_by: string
+          id: string
+          revoked_at: string | null
+          token: string
+        }
+        Insert: {
+          community_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          revoked_at?: string | null
+          token: string
+        }
+        Update: {
+          community_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_invites_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_invites_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_members: {
+        Row: {
+          community_id: string
+          joined_at: string
+          profile_id: string
+          role: string
+        }
+        Insert: {
+          community_id: string
+          joined_at?: string
+          profile_id: string
+          role?: string
+        }
+        Update: {
+          community_id?: string
+          joined_at?: string
+          profile_id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_members_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consents: {
         Row: {
           granted_at: string
@@ -481,6 +607,35 @@ export type Database = {
           },
         ]
       }
+      post_hashtags: {
+        Row: {
+          age_band: Database["public"]["Enums"]["age_band"]
+          created_at: string
+          post_id: string
+          tag: string
+        }
+        Insert: {
+          age_band: Database["public"]["Enums"]["age_band"]
+          created_at?: string
+          post_id: string
+          tag: string
+        }
+        Update: {
+          age_band?: Database["public"]["Enums"]["age_band"]
+          created_at?: string
+          post_id?: string
+          tag?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_hashtags_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post_likes: {
         Row: {
           created_at: string
@@ -567,6 +722,7 @@ export type Database = {
           audio_path: string | null
           author_id: string
           caption: string
+          community_id: string | null
           cover_path: string | null
           created_at: string
           edit_manifest: Json
@@ -588,6 +744,7 @@ export type Database = {
           audio_path?: string | null
           author_id: string
           caption?: string
+          community_id?: string | null
           cover_path?: string | null
           created_at?: string
           edit_manifest?: Json
@@ -609,6 +766,7 @@ export type Database = {
           audio_path?: string | null
           author_id?: string
           caption?: string
+          community_id?: string | null
           cover_path?: string | null
           created_at?: string
           edit_manifest?: Json
@@ -634,6 +792,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "posts_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "posts_music_track_id_fkey"
             columns: ["music_track_id"]
             isOneToOne: false
@@ -653,6 +818,7 @@ export type Database = {
         Row: {
           age_band: Database["public"]["Enums"]["age_band"] | null
           allow_comments: string
+          allow_community_invites: string
           allow_dms: string
           avatar_hue: number
           avatar_url: string | null
@@ -660,8 +826,11 @@ export type Database = {
           bio: string
           birth_year: number | null
           bold_text: boolean
+          break_reminders: boolean
           city: string | null
+          city_key: string | null
           claimed_band: Database["public"]["Enums"]["age_band"] | null
+          class_name: string | null
           content_pace: string
           created_at: string
           daily_limit_minutes: number
@@ -670,17 +839,28 @@ export type Database = {
           email_dms: boolean
           email_follows: boolean
           email_likes: boolean
+          guardian_email: string | null
           handle: string
+          heard_from: string | null
           hide_from_search: boolean
+          hide_hashtags: boolean
+          hide_reposts: boolean
           high_contrast: boolean
           id: string
           interests: string[]
           is_demo: boolean
           is_private: boolean
+          language: string
+          muted_profile_ids: string[]
+          muted_words: string[]
           onboarded_at: string | null
+          onboarding_version: number
           pronouns: string | null
           quiet_hours: boolean
           reduce_motion: boolean
+          safety_pledge_at: string | null
+          school: string | null
+          show_city: string
           status: string | null
           text_scale: string
           theme: string
@@ -692,6 +872,7 @@ export type Database = {
         Insert: {
           age_band?: Database["public"]["Enums"]["age_band"] | null
           allow_comments?: string
+          allow_community_invites?: string
           allow_dms?: string
           avatar_hue?: number
           avatar_url?: string | null
@@ -699,8 +880,11 @@ export type Database = {
           bio?: string
           birth_year?: number | null
           bold_text?: boolean
+          break_reminders?: boolean
           city?: string | null
+          city_key?: string | null
           claimed_band?: Database["public"]["Enums"]["age_band"] | null
+          class_name?: string | null
           content_pace?: string
           created_at?: string
           daily_limit_minutes?: number
@@ -709,17 +893,28 @@ export type Database = {
           email_dms?: boolean
           email_follows?: boolean
           email_likes?: boolean
+          guardian_email?: string | null
           handle: string
+          heard_from?: string | null
           hide_from_search?: boolean
+          hide_hashtags?: boolean
+          hide_reposts?: boolean
           high_contrast?: boolean
           id?: string
           interests?: string[]
           is_demo?: boolean
           is_private?: boolean
+          language?: string
+          muted_profile_ids?: string[]
+          muted_words?: string[]
           onboarded_at?: string | null
+          onboarding_version?: number
           pronouns?: string | null
           quiet_hours?: boolean
           reduce_motion?: boolean
+          safety_pledge_at?: string | null
+          school?: string | null
+          show_city?: string
           status?: string | null
           text_scale?: string
           theme?: string
@@ -731,6 +926,7 @@ export type Database = {
         Update: {
           age_band?: Database["public"]["Enums"]["age_band"] | null
           allow_comments?: string
+          allow_community_invites?: string
           allow_dms?: string
           avatar_hue?: number
           avatar_url?: string | null
@@ -738,8 +934,11 @@ export type Database = {
           bio?: string
           birth_year?: number | null
           bold_text?: boolean
+          break_reminders?: boolean
           city?: string | null
+          city_key?: string | null
           claimed_band?: Database["public"]["Enums"]["age_band"] | null
+          class_name?: string | null
           content_pace?: string
           created_at?: string
           daily_limit_minutes?: number
@@ -748,17 +947,28 @@ export type Database = {
           email_dms?: boolean
           email_follows?: boolean
           email_likes?: boolean
+          guardian_email?: string | null
           handle?: string
+          heard_from?: string | null
           hide_from_search?: boolean
+          hide_hashtags?: boolean
+          hide_reposts?: boolean
           high_contrast?: boolean
           id?: string
           interests?: string[]
           is_demo?: boolean
           is_private?: boolean
+          language?: string
+          muted_profile_ids?: string[]
+          muted_words?: string[]
           onboarded_at?: string | null
+          onboarding_version?: number
           pronouns?: string | null
           quiet_hours?: boolean
           reduce_motion?: boolean
+          safety_pledge_at?: string | null
+          school?: string | null
+          show_city?: string
           status?: string | null
           text_scale?: string
           theme?: string
@@ -807,6 +1017,47 @@ export type Database = {
           },
         ]
       }
+      super_posts: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          media_url: string | null
+          pinned: boolean
+          title: string | null
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          media_url?: string | null
+          pinned?: boolean
+          title?: string | null
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          media_url?: string | null
+          pinned?: boolean
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "super_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -834,24 +1085,53 @@ export type Database = {
         Args: { _conv: string; _members: string[] }
         Returns: undefined
       }
+      convert_group_to_community: {
+        Args: { _conv: string; _emoji?: string; _name?: string }
+        Returns: string
+      }
+      create_community: {
+        Args: { _description?: string; _emoji?: string; _name: string }
+        Returns: string
+      }
       current_band: {
         Args: never
         Returns: Database["public"]["Enums"]["age_band"]
       }
       current_profile_id: { Args: never; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      is_community_admin: { Args: { _community_id: string }; Returns: boolean }
+      is_community_member: { Args: { _community_id: string }; Returns: boolean }
       is_conversation_member: {
         Args: { _conversation_id: string }
         Returns: boolean
+      }
+      join_community: { Args: { _token: string }; Returns: string }
+      normalize_city_key: { Args: { _raw: string }; Returns: string }
+      remove_community_member: {
+        Args: { _community_id: string; _member: string }
+        Returns: undefined
       }
       remove_group_member: {
         Args: { _conv: string; _member: string }
         Returns: undefined
       }
+      reset_community_invite: {
+        Args: { _community_id: string }
+        Returns: string
+      }
       start_conversation: { Args: { _other: string }; Returns: string }
       start_group: {
         Args: { _members: string[]; _title: string }
         Returns: string
+      }
+      update_community: {
+        Args: {
+          _community_id: string
+          _description: string
+          _emoji: string
+          _name: string
+        }
+        Returns: undefined
       }
       update_group: {
         Args: { _conv: string; _emoji: string; _title: string }

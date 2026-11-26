@@ -188,7 +188,7 @@ const { state, me, sendMessage, sendPhoto, deleteMessage, markRead } = useLowkey
 const EMOJIS = ["🌻", "🎮", "⚽", "🎨", "🎧", "📚", "🍕", "✨", "🛹", "🌙"];
 
 function GroupSheet({ conversationId, onClose }: { conversationId: string; onClose: () => void }) {
-  const { state, me, addGroupMembers, updateGroup, removeGroupMember } = useLowkey();
+  const { state, me, addGroupMembers, updateGroup, removeGroupMember, convertGroupToCommunity } = useLowkey();
   const navigate = useNavigate();
   const conversation = state.conversations.find((c) => c.id === conversationId);
   const [title, setTitle] = useState(conversation?.title ?? "");
@@ -249,7 +249,23 @@ function GroupSheet({ conversationId, onClose }: { conversationId: string; onClo
           )}
         </section>
 
-        <button disabled={busy} onClick={() => void run(() => removeGroupMember(conversationId, me.id), "you left the group").then((ok) => { if (ok) void navigate({ to: "/app/chats" }); })} className="mt-8 flex h-11 w-full items-center justify-center gap-2 rounded-full border border-destructive text-destructive"><LogOut className="size-4" />leave group</button>
+        <button
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            const cid = await convertGroupToCommunity(conversationId, title, emoji ?? undefined);
+            setBusy(false);
+            if (cid) {
+              toast.success("group is now a community!");
+              void navigate({ to: "/app/community/$id", params: { id: cid } });
+            }
+          }}
+          className="lowkey mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary font-bold text-primary-foreground disabled:opacity-50"
+        >
+          🏫 turn into a community
+        </button>
+
+        <button disabled={busy} onClick={() => void run(() => removeGroupMember(conversationId, me.id), "you left the group").then((ok) => { if (ok) void navigate({ to: "/app/chats" }); })} className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full border border-destructive text-destructive"><LogOut className="size-4" />leave group</button>
       </div>
     </div>
   );

@@ -1,55 +1,23 @@
-/* lowkey_social — minimal offline-first service worker (prod only) */
-const CACHE = "lowkey-v1";
-const PRECACHE = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
+/* Kill-switch cleanup worker: evicts old lowkey-v1 caches and unregisters itself. */
+self.addEventListener("install", () => self.skipWaiting());
 
-self.addEventListener("install", (event) => {
+self.addEventListener("activate", (event) =>
   event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting()),
-  );
-});
-
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim()),
-  );
-});
-
-self.addEventListener("fetch", (event) => {
-  const request = event.request;
-  if (request.method !== "GET") return;
-  const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-
-  // navigations: network first, fall back to the cached shell offline
-  if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put("/", copy));
-          return response;
-        })
-        .catch(() => caches.match("/")),
-    );
-    return;
-  }
-
-  // static assets: cache first, then network + store
-  event.respondWith(
-    caches.match(request).then(
-      (hit) =>
-        hit ||
-        fetch(request).then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(request, copy));
-          return response;
-        }),
-    ),
-  );
-});
+    (async () => {
+      try {
+        const cacheNames = await caches.keys();
+        const ownCaches = cacheNames.filter(
+          (name) =>
+            name.startsWith("lowkey-") ||
+            (/(^|-)precache-v\d+-|(^|-)runtime-/.test(name) && name.endsWith(self.registration.scope)),
+        );
+        await Promise.allSettled(ownCaches.map((name) => caches.delete(name)));
+        await self.clients.claim();
+        const windowClients = await self.clients.matchAll({ type: "window" });
+        await Promise.allSettled(windowClients.map((client) => client.navigate(client.url)));
+      } finally {
+        await self.registration.unregister();
+      }
+    })(),
+  ),
+);

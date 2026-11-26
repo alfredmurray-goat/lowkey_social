@@ -65,6 +65,20 @@ theme?: ThemePref;
   emailLikes?: boolean;
   emailComments?: boolean;
   emailDms?: boolean;
+  onboardingVersion?: number;
+  school?: string | null;
+  className?: string | null;
+  guardianEmail?: string | null;
+  heardFrom?: string | null;
+  safetyPledgeAt?: string | null;
+  mutedWords?: string[];
+  mutedProfileIds?: string[];
+  breakReminders?: boolean;
+  hideReposts?: boolean;
+  hideHashtags?: boolean;
+  allowCommunityInvites?: Audience;
+  showCity?: "band" | "followers" | "nobody";
+  language?: "en" | "da";
 }
 
 export interface ImportProgress {
@@ -100,11 +114,21 @@ createPost: (input: {
     caption: string;
     mediaUrl: string | null;
     topic?: string | null;
+    communityId?: string | null;
     songTitle?: string | null;
     songArtist?: string | null;
     audioPath?: string | null;
     editManifest?: Record<string, unknown>;
   }) => Promise<string | null>;
+  createCommunity: (name: string, emoji?: string, description?: string) => Promise<string | null>;
+  convertGroupToCommunity: (conversationId: string, name?: string, emoji?: string) => Promise<string | null>;
+  joinCommunity: (token: string) => Promise<{ ok: boolean; communityId?: string; error?: string }>;
+  resetCommunityInvite: (communityId: string) => Promise<string | null>;
+  updateCommunity: (communityId: string, name: string, emoji: string, description: string) => Promise<boolean>;
+  removeCommunityMember: (communityId: string, profileId: string) => Promise<boolean>;
+  createSuperPost: (input: { title?: string; body: string; mediaUrl?: string | null; expiresAt?: string | null }) => Promise<boolean>;
+  toggleSuperPostPin: (id: string, pinned: boolean) => Promise<void>;
+  deleteSuperPost: (id: string) => Promise<void>;
   toggleRepost: (postId: string) => Promise<void>;
   toggleLike: (postId: string) => Promise<void>;
   addComment: (postId: string, body: string) => Promise<void>;
@@ -226,6 +250,21 @@ textScale: (r['text_scale'] as TextScale) ?? "normal",
     emailLikes: Boolean(r['email_likes']),
     emailComments: Boolean(r['email_comments']),
     emailDms: Boolean(r['email_dms']),
+    onboardingVersion: (r['onboarding_version'] as number | null) ?? 1,
+    school: (r['school'] as string | null) ?? null,
+    className: (r['class_name'] as string | null) ?? null,
+    guardianEmail: (r['guardian_email'] as string | null) ?? null,
+    heardFrom: (r['heard_from'] as string | null) ?? null,
+    safetyPledgeAt: (r['safety_pledge_at'] as string | null) ?? null,
+    cityKey: (r['city_key'] as string | null) ?? null,
+    mutedWords: (r['muted_words'] as string[] | null) ?? [],
+    mutedProfileIds: (r['muted_profile_ids'] as string[] | null) ?? [],
+    breakReminders: r['break_reminders'] === undefined ? true : Boolean(r['break_reminders']),
+    hideReposts: Boolean(r['hide_reposts']),
+    hideHashtags: Boolean(r['hide_hashtags']),
+    allowCommunityInvites: (r['allow_community_invites'] as Audience) ?? "everyone",
+    showCity: (r['show_city'] as "band" | "followers" | "nobody") ?? "band",
+    language: (r['language'] as "en" | "da") ?? "en",
   };
 }
 
@@ -289,6 +328,11 @@ if (!mineRow) {
       bookmarksRes,
       notifsRes,
       blocksRes,
+      communitiesRes,
+      commMembersRes,
+      commInvitesRes,
+      hashtagsRes,
+      superPostsRes,
     ] = await Promise.all([
       supabase.from("profiles").select("*"),
       supabase.from("posts").select("*").order("created_at", { ascending: false }),
@@ -306,6 +350,11 @@ if (!mineRow) {
         .order("created_at", { ascending: false })
         .limit(60),
       supabase.from("blocks").select("*"),
+      supabase.from("communities").select("*").order("created_at", { ascending: false }),
+      supabase.from("community_members").select("*"),
+      supabase.from("community_invites").select("*").is("revoked_at", null),
+      supabase.from("post_hashtags").select("post_id, tag, age_band"),
+      supabase.from("super_posts").select("*").order("created_at", { ascending: false }),
     ]);
 
     const members = (memberRes.data ?? []) as Row[];
@@ -319,7 +368,8 @@ if (!mineRow) {
 const profileRows = (profilesRes.data ?? []) as Row[];
     const postRows = (postsRes.data ?? []) as Row[];
     const messageRows = (messagesRes.data ?? []) as Row[];
-    const [avatarUrls, mediaUrls, audioUrls, dmUrls] = await Promise.all([
+    const superPostRows = (superPostsRes.data ?? []) as Row[];
+    const [avatarUrls, mediaUrls, audioUrls, dmUrls, superMediaUrls] = await Promise.all([
       signPaths(
         "avatars",
         profileRows.map((r) => (r['avatar_url'] as string | null) ?? null),
@@ -336,6 +386,10 @@ const profileRows = (profilesRes.data ?? []) as Row[];
       signPaths(
         "media",
         messageRows.map((r) => (r['media_path'] as string | null) ?? null),
+      ),
+      signPaths(
+        "media",
+        superPostRows.map((r) => (r['media_url'] as string | null) ?? null),
       ),
     ]);
 
@@ -376,8 +430,43 @@ posts: postRows.map((r) => ({
         sourcePostId: (r['source_post_id'] as string | null) ?? null,
         taggedHandle: (r['tagged_handle'] as string | null) ?? null,
         topic: (r['topic'] as string | null) ?? null,
+        communityId: (r['community_id'] as string | null) ?? null,
         ageBand: r['age_band'] as AgeBand,
         createdAt: r['created_at'] as string,
+      })),
+      communities: ((communitiesRes.data ?? []) as Row[]).map((r) => {
+        const cid = r['id'] as string;
+        const mIds = ((commMembersRes.data ?? []) as Row[])
+          .filter((m) => m['community_id'] === cid)
+          .map((m) => m['profile_id'] as string);
+        const inv = ((commInvitesRes.data ?? []) as Row[]).find((i) => i['community_id'] === cid);
+        return {
+          id: cid,
+          name: r['name'] as string,
+          description: (r['description'] as string) ?? "",
+          emoji: (r['emoji'] as string) ?? "🏫",
+          ageBand: r['age_band'] as AgeBand,
+          ownerId: r['owner_id'] as string,
+          conversationId: (r['conversation_id'] as string | null) ?? null,
+          memberIds: mIds,
+          inviteToken: (inv?.['token'] as string | null) ?? null,
+          createdAt: r['created_at'] as string,
+        };
+      }),
+      superPosts: superPostRows.map((r) => ({
+        id: r['id'] as string,
+        authorId: r['author_id'] as string,
+        title: (r['title'] as string | null) ?? null,
+        body: r['body'] as string,
+        mediaUrl: resolve(superMediaUrls, (r['media_url'] as string | null) ?? null),
+        expiresAt: (r['expires_at'] as string | null) ?? null,
+        pinned: Boolean(r['pinned']),
+        createdAt: r['created_at'] as string,
+      })),
+      hashtags: ((hashtagsRes.data ?? []) as Row[]).map((r) => ({
+        postId: r['post_id'] as string,
+        tag: r['tag'] as string,
+        ageBand: r['age_band'] as AgeBand,
       })),
       comments: ((commentsRes.data ?? []) as Row[]).map((r) => ({
         id: r['id'] as string,
@@ -541,6 +630,20 @@ return {
         ...(prefs.emailLikes !== undefined ? { email_likes: prefs.emailLikes } : {}),
         ...(prefs.emailComments !== undefined ? { email_comments: prefs.emailComments } : {}),
         ...(prefs.emailDms !== undefined ? { email_dms: prefs.emailDms } : {}),
+        ...(prefs.onboardingVersion !== undefined ? { onboarding_version: prefs.onboardingVersion } : {}),
+        ...(prefs.school !== undefined ? { school: prefs.school } : {}),
+        ...(prefs.className !== undefined ? { class_name: prefs.className } : {}),
+        ...(prefs.guardianEmail !== undefined ? { guardian_email: prefs.guardianEmail } : {}),
+        ...(prefs.heardFrom !== undefined ? { heard_from: prefs.heardFrom } : {}),
+        ...(prefs.safetyPledgeAt !== undefined ? { safety_pledge_at: prefs.safetyPledgeAt } : {}),
+        ...(prefs.mutedWords !== undefined ? { muted_words: prefs.mutedWords } : {}),
+        ...(prefs.mutedProfileIds !== undefined ? { muted_profile_ids: prefs.mutedProfileIds } : {}),
+        ...(prefs.breakReminders !== undefined ? { break_reminders: prefs.breakReminders } : {}),
+        ...(prefs.hideReposts !== undefined ? { hide_reposts: prefs.hideReposts } : {}),
+        ...(prefs.hideHashtags !== undefined ? { hide_hashtags: prefs.hideHashtags } : {}),
+        ...(prefs.allowCommunityInvites ? { allow_community_invites: prefs.allowCommunityInvites } : {}),
+        ...(prefs.showCity ? { show_city: prefs.showCity } : {}),
+        ...(prefs.language ? { language: prefs.language } : {}),
       };
       const { error } = await supabase.from("profiles").update(patch).eq("id", id);
       if (error) return { ok: false, error: error.message.toLowerCase() };
@@ -555,7 +658,7 @@ return {
     if (!id) return { ok: false, error: "no profile yet" };
     const { error } = await supabase
       .from("profiles")
-      .update({ onboarded_at: new Date().toISOString() })
+      .update({ onboarded_at: new Date().toISOString(), onboarding_version: 2 })
       .eq("id", id);
     if (error) return { ok: false, error: error.message.toLowerCase() };
     await refresh();
@@ -654,6 +757,7 @@ async (input: {
       caption: string;
       mediaUrl: string | null;
       topic?: string | null;
+      communityId?: string | null;
       songTitle?: string | null;
       songArtist?: string | null;
       audioPath?: string | null;
@@ -671,6 +775,7 @@ title: input.title?.trim() ? input.title.trim().toLowerCase() : null,
           media_url: input.mediaUrl,
           poster_hue: Math.floor(Math.random() * 360),
           topic: input.topic ?? null,
+          community_id: input.communityId ?? null,
           song_title: input.songTitle ?? null,
           song_artist: input.songArtist ?? null,
           audio_path: input.audioPath ?? null,
@@ -685,6 +790,141 @@ title: input.title?.trim() ? input.title.trim().toLowerCase() : null,
       return (data as Row)['id'] as string;
     },
     [me, refresh],
+  );
+
+  /* ---------- communities ---------- */
+  const createCommunity = useCallback(
+    async (name: string, emoji = "🏫", description = "") => {
+      const { data, error } = await supabase.rpc("create_community", {
+        _name: name,
+        _emoji: emoji,
+        _description: description,
+      });
+      if (error || !data) {
+        toast.error(error?.message.toLowerCase() ?? "couldn't create community");
+        return null;
+      }
+      await refresh();
+      return data as string;
+    },
+    [refresh],
+  );
+
+  const convertGroupToCommunity = useCallback(
+    async (conversationId: string, name?: string, emoji?: string) => {
+      const { data, error } = await supabase.rpc("convert_group_to_community", {
+        _conv: conversationId,
+        ...(name ? { _name: name } : {}),
+        ...(emoji ? { _emoji: emoji } : {}),
+      });
+      if (error || !data) {
+        toast.error(error?.message.toLowerCase() ?? "couldn't turn group into community");
+        return null;
+      }
+      await refresh();
+      return data as string;
+    },
+    [refresh],
+  );
+
+  const joinCommunity = useCallback(
+    async (token: string): Promise<{ ok: boolean; communityId?: string; error?: string }> => {
+      const { data, error } = await supabase.rpc("join_community", { _token: token });
+      if (error || !data) {
+        return { ok: false, error: error?.message.toLowerCase() ?? "couldn't join community" };
+      }
+      await refresh();
+      return { ok: true, communityId: data as string };
+    },
+    [refresh],
+  );
+
+  const resetCommunityInvite = useCallback(
+    async (communityId: string) => {
+      const { data, error } = await supabase.rpc("reset_community_invite", {
+        _community_id: communityId,
+      });
+      if (error || !data) {
+        toast.error(error?.message.toLowerCase() ?? "couldn't reset invite");
+        return null;
+      }
+      await refresh();
+      return data as string;
+    },
+    [refresh],
+  );
+
+  const updateCommunity = useCallback(
+    async (communityId: string, name: string, emoji: string, description: string) => {
+      const { error } = await supabase.rpc("update_community", {
+        _community_id: communityId,
+        _name: name,
+        _emoji: emoji,
+        _description: description,
+      });
+      if (error) {
+        toast.error(error.message.toLowerCase());
+        return false;
+      }
+      await refresh();
+      return true;
+    },
+    [refresh],
+  );
+
+  const removeCommunityMember = useCallback(
+    async (communityId: string, profileId: string) => {
+      const { error } = await supabase.rpc("remove_community_member", {
+        _community_id: communityId,
+        _member: profileId,
+      });
+      if (error) {
+        toast.error(error.message.toLowerCase());
+        return false;
+      }
+      await refresh();
+      return true;
+    },
+    [refresh],
+  );
+
+  /* ---------- admin super posts ---------- */
+  const createSuperPost = useCallback(
+    async (input: { title?: string; body: string; mediaUrl?: string | null; expiresAt?: string | null }) => {
+      const id = meIdRef.current;
+      if (!id) return false;
+      const { error } = await supabase.from("super_posts").insert({
+        author_id: id,
+        title: input.title?.trim() || null,
+        body: input.body.trim(),
+        media_url: input.mediaUrl ?? null,
+        expires_at: input.expiresAt || null,
+        pinned: true,
+      });
+      if (error) {
+        toast.error(error.message.toLowerCase());
+        return false;
+      }
+      await refresh();
+      return true;
+    },
+    [refresh],
+  );
+
+  const toggleSuperPostPin = useCallback(
+    async (id: string, pinned: boolean) => {
+      await supabase.from("super_posts").update({ pinned }).eq("id", id);
+      await refresh();
+    },
+    [refresh],
+  );
+
+  const deleteSuperPost = useCallback(
+    async (id: string) => {
+      await supabase.from("super_posts").delete().eq("id", id);
+      await refresh();
+    },
+    [refresh],
   );
 
   /** notify the other person, unless it's about my own content */
@@ -1373,6 +1613,15 @@ needsProfile: needsProfile && Boolean(authUserId),
       verifyAge,
       recordConsent,
       createPost,
+      createCommunity,
+      convertGroupToCommunity,
+      joinCommunity,
+      resetCommunityInvite,
+      updateCommunity,
+      removeCommunityMember,
+      createSuperPost,
+      toggleSuperPostPin,
+      deleteSuperPost,
       toggleLike,
       addComment,
       toggleRepost,
@@ -1422,6 +1671,15 @@ needsProfile,
       verifyAge,
       recordConsent,
       createPost,
+      createCommunity,
+      convertGroupToCommunity,
+      joinCommunity,
+      resetCommunityInvite,
+      updateCommunity,
+      removeCommunityMember,
+      createSuperPost,
+      toggleSuperPostPin,
+      deleteSuperPost,
       toggleLike,
       addComment,
       toggleFollow,

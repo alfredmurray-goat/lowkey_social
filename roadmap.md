@@ -45,6 +45,7 @@
 ## open
 - [done] profile redesign; restored sound on the one old edited video whose original file still exists
 - own supabase project instead of managed backend (workspace-admin action, blocked)
+- [done] kids-first update (plan 2026-11-26): onboarding v2 + catch-up, city aliases, communities + QR invites + group-to-community conversion, hashtags, admin super posts, PWA opens on /app, uploaded drawing loader with background removed, YouTube-style studio create page, settings overhaul, automatic video subtitles, modern icons & polish
 
 ## backend ownership (open decision)
 - user wants their own supabase project + api keys instead of the managed cloud backend
