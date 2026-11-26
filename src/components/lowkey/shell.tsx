@@ -121,7 +121,7 @@ export function LowkeyMark({ size = 32 }: { size?: number }) {
       alt="lowkey_social logo"
       width={size}
       height={size}
-      className="rounded-xl"
+      className="rounded-2xl shadow-xs"
       style={{ width: size, height: size }}
     />
   );
@@ -131,7 +131,7 @@ export function BetaTag({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "lowkey rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold tracking-wide text-primary-foreground",
+        "lowkey rounded-xl bg-primary px-2 py-0.5 text-[11px] font-bold tracking-wide text-primary-foreground shadow-xs",
         className,
       )}
     >
@@ -191,9 +191,17 @@ export function SiteFooter() {
 
 export function TopBar({ title = "lowkey_social" }: { title?: string }) {
   const { state, me } = useLowkey();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const unread = state.notifications.filter((n) => !n.readAt && n.recipientId === me?.id).length;
+  const iconPill = (active: boolean) =>
+    cn(
+      "relative flex h-9 w-10 items-center justify-center rounded-2xl transition-all duration-150 active:scale-90",
+      active
+        ? "bg-primary text-primary-foreground shadow-xs"
+        : "text-muted-foreground hover:bg-primary-soft/70 hover:text-foreground",
+    );
   return (
-    <header className="sticky top-0 z-20 grid grid-cols-[minmax(0,1fr)_auto] items-center border-b border-border bg-background/95 px-4 py-3 backdrop-blur-lg">
+    <header className="sticky top-0 z-20 grid grid-cols-[minmax(0,1fr)_auto] items-center border-b border-border bg-card/95 px-4 py-2.5 backdrop-blur-xl">
       <Link to="/app" className="flex items-center gap-2">
         <LowkeyMark size={28} />
         <span className="lowkey truncate font-display text-lg leading-5 font-bold">{title}</span>
@@ -203,18 +211,18 @@ export function TopBar({ title = "lowkey_social" }: { title?: string }) {
         <Link
           to="/app/saved"
           aria-label="saved posts"
-          className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted"
+          className={iconPill(pathname.startsWith("/app/saved"))}
         >
-          <Bookmark className="size-5" />
+          <Bookmark className="size-[20px]" strokeWidth={pathname.startsWith("/app/saved") ? 2.4 : 2.1} />
         </Link>
         <Link
           to="/app/notifications"
           aria-label="notifications"
-          className="relative rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted"
+          className={iconPill(pathname.startsWith("/app/notifications"))}
         >
-          <Bell className="size-5" />
+          <Bell className="size-[20px]" strokeWidth={pathname.startsWith("/app/notifications") ? 2.4 : 2.1} />
           {unread > 0 && (
-            <span className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+            <span className="absolute top-0.5 right-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground ring-2 ring-card">
               {unread > 9 ? "9+" : unread}
             </span>
           )}
@@ -222,9 +230,9 @@ export function TopBar({ title = "lowkey_social" }: { title?: string }) {
         <Link
           to="/app/search"
           aria-label="search"
-          className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted"
+          className={iconPill(pathname.startsWith("/app/search"))}
         >
-          <Search className="size-5" />
+          <Search className="size-[20px]" strokeWidth={pathname.startsWith("/app/search") ? 2.4 : 2.1} />
         </Link>
       </div>
     </header>
@@ -261,13 +269,13 @@ export function CookieBanner() {
         <div className="flex gap-2">
           <button
             onClick={() => decide("all")}
-            className="lowkey flex-1 rounded-full bg-primary py-2.5 text-xs font-bold text-primary-foreground"
+            className="lowkey lk-btn-primary flex-1 py-2.5 text-xs"
           >
             okay
           </button>
           <button
             onClick={() => decide("essential")}
-            className="lowkey flex-1 rounded-full border border-input py-2.5 text-xs font-bold"
+            className="lowkey lk-btn-soft flex-1 py-2.5 text-xs"
           >
             essential only
           </button>
@@ -333,7 +341,7 @@ function DailyLimitReached() {
       </p>
       <Link
         to="/app/settings"
-        className="lowkey rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+        className="lowkey lk-btn-primary px-5 py-2.5 text-sm"
       >
         change my limit
       </Link>

@@ -80,13 +80,13 @@ function AuthPage() {
         find people your age near you. no caps, no pressure. under 18s and adults get completely separate feeds and chats.
       </p>
 
-      <div className="flex gap-1 rounded-full bg-muted p-1">
+      <div className="flex gap-1 rounded-2xl border border-border bg-card p-1.5 shadow-xs">
         {(["up", "in"] as const).map((m) => (
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`lowkey flex-1 rounded-full py-2 text-sm font-semibold transition-colors ${
-              mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+            className={`lowkey flex-1 rounded-xl py-2 text-sm font-bold transition-all active:scale-95 ${
+              mode === m ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground"
             }`}
           >
             {m === "up" ? "new here" : "sign in"}
@@ -125,7 +125,7 @@ function AuthPage() {
         <button
           type="submit"
           disabled={busy}
-          className="lowkey mt-2 rounded-full bg-primary py-3.5 text-sm font-bold text-primary-foreground disabled:opacity-60"
+          className="lowkey lk-btn-primary mt-2 py-3.5 text-sm disabled:opacity-60"
         >
           {busy ? "one sec…" : mode === "up" ? "make my account" : "let me in"}
         </button>

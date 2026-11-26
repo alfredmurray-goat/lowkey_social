@@ -1,6 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Flame, MapPin, MessageCircle, ScanFace, ShieldCheck, Timer } from "lucide-react";
+import {
+  CircleUserRound,
+  Clapperboard,
+  Flame,
+  Home,
+  MapPin,
+  MessageCircleHeart,
+  ScanFace,
+  ShieldCheck,
+  SquarePlus,
+  Timer,
+} from "lucide-react";
 import { BetaTag, LowkeyMark, SiteFooter } from "@/components/lowkey/shell";
 import { useLowkey } from "@/lib/lowkey/store";
 
@@ -66,7 +77,15 @@ const features = [
   { icon: ScanFace, title: "birthday + face check", body: "type your birthday, then a face model on your own phone checks it matches. nothing uploaded." },
   { icon: Flame, title: "friend streaks", body: "chat every day, keep the flame going. 1:1 or in group chats." },
   { icon: Timer, title: "a daily limit", body: "45 minutes a day for under 18s by default. resets at your local midnight." },
-  { icon: MessageCircle, title: "no caps, no pressure", body: "no grammar police, no follower counts shoved in your face. just chill." },
+  { icon: MessageCircleHeart, title: "no caps, no pressure", body: "no grammar police, no follower counts shoved in your face. just chill." },
+];
+
+const navPreview = [
+  { label: "home", icon: Home, active: true },
+  { label: "chats", icon: MessageCircleHeart, active: false },
+  { label: "create", icon: SquarePlus, active: false },
+  { label: "videos", icon: Clapperboard, active: false },
+  { label: "profile", icon: CircleUserRound, active: false },
 ];
 
 function Landing() {
@@ -88,12 +107,12 @@ function Landing() {
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
         <div className="flex items-center gap-2">
           <LowkeyMark size={34} />
-          <span className="lowkey text-lg font-extrabold tracking-tight">lowkey_social</span>
+          <span className="lowkey font-display text-lg font-extrabold tracking-tight">lowkey_social</span>
           <BetaTag />
         </div>
         <Link
           to="/auth"
-          className="lowkey min-h-11 content-center rounded-full border border-border bg-card px-5 text-sm font-bold transition-colors hover:bg-muted"
+          className="lowkey lk-btn-soft min-h-11 px-5 text-sm"
         >
           sign in
         </Link>
@@ -107,11 +126,11 @@ function Landing() {
         <div className="relative motion-safe:animate-[lk-drop_0.9s_cubic-bezier(.2,1.4,.4,1)_both]">
           <LowkeyMark size={96} />
         </div>
-        <h1 className="lowkey relative mt-6 max-w-3xl text-5xl leading-[1.02] font-extrabold tracking-tight md:text-7xl motion-safe:animate-[lk-up_0.8s_0.15s_ease-out_both]">
+        <h1 className="lowkey font-display relative mt-6 max-w-3xl text-5xl leading-[1.02] font-extrabold tracking-tight md:text-7xl motion-safe:animate-[lk-up_0.8s_0.15s_ease-out_both]">
           find people your age,{" "}
           <span className="relative inline-block">
             <span className="relative z-10">near you</span>
-            <span className="absolute inset-x-0 bottom-1 -z-0 h-4 rounded-full bg-primary md:h-6 motion-safe:animate-[lk-grow_0.7s_0.7s_ease-out_both] origin-left" />
+            <span className="absolute inset-x-0 bottom-1 -z-0 h-4 rounded-2xl bg-primary md:h-6 motion-safe:animate-[lk-grow_0.7s_0.7s_ease-out_both] origin-left" />
           </span>
           .
         </h1>
@@ -122,16 +141,33 @@ function Landing() {
         <div className="relative mt-8 flex flex-col gap-3 sm:flex-row motion-safe:animate-[lk-up_0.8s_0.45s_ease-out_both]">
           <Link
             to="/auth"
-            className="lowkey min-h-13 content-center rounded-full bg-primary px-8 py-4 text-base font-extrabold text-primary-foreground shadow-lg transition-transform hover:-translate-y-0.5 hover:shadow-xl"
+            className="lowkey lk-btn-primary min-h-13 px-8 py-4 text-base font-extrabold shadow-md hover:-translate-y-0.5 hover:shadow-lg"
           >
             join the beta, it&apos;s free
           </Link>
           <a
             href="#how"
-            className="lowkey min-h-13 content-center rounded-full px-6 py-4 text-base font-bold text-muted-foreground hover:text-foreground"
+            className="lowkey lk-btn-soft min-h-13 px-6 py-4 text-base text-muted-foreground hover:text-foreground"
           >
             how it works ↓
           </a>
+        </div>
+
+        <div className="lk-card relative mt-10 flex w-full max-w-sm items-center justify-between px-3 py-2.5 motion-safe:animate-[lk-up_0.8s_0.55s_ease-out_both]">
+          {navPreview.map(({ label, icon: Icon, active }) => (
+            <div key={label} className="flex flex-col items-center gap-1 px-1">
+              <span
+                className={`flex h-8 w-11 items-center justify-center rounded-2xl ${
+                  active ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground"
+                }`}
+              >
+                <Icon className="size-5" strokeWidth={active ? 2.4 : 2} />
+              </span>
+              <span className={`lowkey text-[10px] ${active ? "font-bold text-foreground" : "text-muted-foreground"}`}>
+                {label}
+              </span>
+            </div>
+          ))}
         </div>
 
         <div className="relative mt-16 grid w-full max-w-3xl grid-cols-3 gap-3">
@@ -161,7 +197,7 @@ function Landing() {
 
       <section id="how" className="mx-auto max-w-5xl px-5 py-16">
         <Reveal>
-          <h2 className="lowkey text-center text-3xl font-extrabold md:text-4xl">two worlds, zero overlap</h2>
+          <h2 className="lowkey font-display text-center text-3xl font-extrabold md:text-4xl">two worlds, zero overlap</h2>
         </Reveal>
         <div className="mt-10 grid gap-4 md:grid-cols-2">
           {[
@@ -169,8 +205,11 @@ function Landing() {
             { band: "18+", note: "only sees 18+ posts, profiles and chats" },
           ].map((b, i) => (
             <Reveal key={b.band} delay={i * 150}>
-              <div className="rounded-[2rem] border border-border bg-card p-8 text-center shadow-sm">
-                <p className="text-6xl font-extrabold">{b.band}</p>
+              <div className="lk-card p-8 text-center">
+                <span className="mb-4 inline-flex h-10 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-xs">
+                  <ShieldCheck className="size-6" strokeWidth={2.4} />
+                </span>
+                <p className="font-display text-5xl font-extrabold md:text-6xl">{b.band}</p>
                 <p className="lowkey mt-3 text-muted-foreground">{b.note}</p>
               </div>
             </Reveal>
@@ -182,11 +221,11 @@ function Landing() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f, i) => (
             <Reveal key={f.title} delay={(i % 3) * 120}>
-              <div className="h-full rounded-3xl bg-card p-6 shadow-sm transition-transform hover:-translate-y-1">
-                <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-soft">
-                  <f.icon className="size-5" />
+              <div className="lk-card h-full p-6 transition-transform hover:-translate-y-1">
+                <span className="flex h-10 w-13 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-xs">
+                  <f.icon className="size-[22px]" strokeWidth={2.3} />
                 </span>
-                <h3 className="lowkey mt-4 text-lg font-bold">{f.title}</h3>
+                <h3 className="lowkey font-display mt-4 text-lg font-bold">{f.title}</h3>
                 <p className="lowkey mt-1 text-sm text-muted-foreground">{f.body}</p>
               </div>
             </Reveal>
@@ -196,12 +235,12 @@ function Landing() {
 
       <section className="mx-auto max-w-5xl px-5 pb-24">
         <Reveal>
-          <div className="rounded-[2.5rem] bg-primary px-6 py-14 text-center text-primary-foreground">
-            <h2 className="lowkey text-3xl font-extrabold md:text-5xl">ready to be lowkey?</h2>
+          <div className="rounded-[2rem] border border-border bg-primary px-6 py-14 text-center text-primary-foreground shadow-sm">
+            <h2 className="lowkey font-display text-3xl font-extrabold md:text-5xl">ready to be lowkey?</h2>
             <p className="lowkey mt-3 opacity-80">takes about two minutes. free, eu hosted, no ad trackers.</p>
             <Link
               to="/auth"
-              className="lowkey mt-7 inline-flex min-h-13 items-center rounded-full bg-foreground px-8 py-4 font-extrabold text-background transition-transform hover:scale-105"
+              className="lowkey mt-7 inline-flex min-h-13 items-center rounded-2xl bg-foreground px-8 py-4 font-extrabold text-background shadow-xs transition-transform hover:scale-105 active:scale-95"
             >
               make my account
             </Link>
