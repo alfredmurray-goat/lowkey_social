@@ -1,8 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowLeft, ArrowRight, Camera, Check,
-  ChevronDown, ChevronUp, Crop, FileText, FlipHorizontal2, Gauge, ImagePlus,
-  Loader2, Move, Music2, Play, RotateCw, Save, SlidersHorizontal, Sparkles, Trash2,
+  ChevronDown, ChevronUp, Clapperboard, Crop, FileText, FlipHorizontal2, ImagePlus,
+  Loader2, Move, Music2, Play, RotateCw, Save, SlidersHorizontal, SquarePlus, Trash2,
   Type, Upload, Video,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -13,6 +13,7 @@ import { useLowkey } from "@/lib/lowkey/store";
 import { INTERESTS } from "@/lib/lowkey/types";
 import { defaultAdjustments, type MediaAdjustments, type StudioClip, type StudioSong } from "@/lib/lowkey/editor/types";
 import { renderPhoto, renderVideo } from "@/lib/lowkey/editor/render";
+import { ScribbleLoader } from "@/components/lowkey/scribble-loader";
 
 type Step = "start" | "edit" | "details" | "publish";
 type Tool = "adjust" | "transform" | "text" | "clips" | "music";
@@ -186,11 +187,423 @@ export function MediaStudio() {
     }));
   };
 
-  if (step === "start") return <div className="min-h-[calc(100dvh-8rem)] px-4 py-5 sm:px-6"><header className="mb-6 flex items-end justify-between"><div><p className="lowkey text-xs font-bold text-muted-foreground">media studio</p><h1 className="lowkey font-display text-3xl font-bold">make something</h1></div>{(clips.length > 0 || caption) && <Button variant="ghost" onClick={() => setStep("edit")}>continue</Button>}</header><div className="grid grid-cols-2 gap-3"><Button className="h-36 flex-col gap-3 rounded-2xl" onClick={() => cameraInput.current?.click()}><Camera className="size-7"/>camera</Button><Button variant="secondary" className="h-36 flex-col gap-3 rounded-2xl" onClick={() => mediaInput.current?.click()}><ImagePlus className="size-7"/>photos + videos</Button><Button variant="outline" className="h-24 flex-col gap-2 rounded-2xl" onClick={() => { setClips([]); setStep("details"); }}><FileText className="size-6"/>text post</Button><Button variant="outline" className="h-24 flex-col gap-2 rounded-2xl" onClick={() => setStep("start")}><Save className="size-6"/>{drafts.length} drafts</Button></div><input ref={cameraInput} type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={(e) => void addFiles(e.target.files)}/><input ref={mediaInput} type="file" accept="image/*,video/*,.heic,.heif" multiple className="hidden" onChange={(e) => void addFiles(e.target.files)}/>{drafts.length > 0 && <section className="mt-8"><h2 className="lowkey mb-3 font-display text-lg font-bold">saved drafts</h2><div className="space-y-2">{drafts.map((d) => <div key={d.id} className="flex items-center gap-3 border-b border-border py-3"><div className="flex size-12 items-center justify-center rounded-lg bg-secondary">{d.kind === "video" ? <Video/> : <ImagePlus/>}</div><button className="min-w-0 flex-1 text-left" onClick={() => void resumeDraft(d)}><p className="lowkey truncate font-semibold">{d.title || d.caption || "untitled draft"}</p><p className="text-xs text-muted-foreground">saved {new Date(d.updated_at).toLocaleDateString()}</p></button><Button size="icon" variant="ghost" aria-label="delete draft" onClick={() => void deleteDraft(d.id)}><Trash2 className="size-4"/></Button></div>)}</div></section>}</div>;
+  if (step === "start") {
+    return (
+      <div className="min-h-[calc(100dvh-8rem)] space-y-5 px-4 py-5 sm:px-6">
+        <header className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-13 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-xs">
+              <SquarePlus className="size-6" strokeWidth={2.4} />
+            </span>
+            <div>
+              <h1 className="lowkey font-display text-2xl leading-tight font-bold">create studio</h1>
+              <p className="lowkey text-xs text-muted-foreground">post to your age band or class</p>
+            </div>
+          </div>
+          {(clips.length > 0 || caption) && (
+            <button type="button" onClick={() => setStep("edit")} className="lowkey lk-btn-soft px-3.5 py-2 text-xs">
+              continue
+            </button>
+          )}
+        </header>
 
-  if (step === "publish") return <div className="flex min-h-[calc(100dvh-8rem)] flex-col items-center justify-center px-8 text-center"><Loader2 className="mb-5 size-10 animate-spin"/><h1 className="lowkey font-display text-2xl font-bold">finishing your post</h1><p className="lowkey mt-2 text-sm text-muted-foreground">{renderProgress < 100 ? `editing ${renderProgress}%` : `uploading ${uploadProgress}%`}</p><div className="mt-5 h-2 w-full max-w-sm overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${renderProgress < 100 ? renderProgress : uploadProgress}%` }}/></div></div>;
+        <button
+          type="button"
+          onClick={() => mediaInput.current?.click()}
+          className="lk-card group flex w-full flex-col items-center justify-center gap-3 border-2 border-dashed border-border px-6 py-10 text-center transition-all hover:border-primary hover:bg-primary-soft/30 active:scale-[0.99]"
+        >
+          <span className="flex h-14 w-18 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-xs transition-transform group-hover:scale-105">
+            <Clapperboard className="size-7" strokeWidth={2.4} />
+          </span>
+          <div>
+            <p className="lowkey font-display text-lg font-bold">pick photos or videos</p>
+            <p className="lowkey mt-0.5 text-xs text-muted-foreground">up to 8 clips · edit light, text, trim &amp; music</p>
+          </div>
+        </button>
 
-  if (step === "details") return <div className="min-h-[calc(100dvh-8rem)] px-4 py-4 sm:px-6"><header className="mb-4 flex items-center justify-between"><Button size="icon" variant="ghost" onClick={() => setStep(clips.length ? "edit" : "start")} aria-label="back"><ArrowLeft/></Button><h1 className="lowkey font-display text-xl font-bold">studio · publish</h1><Button variant="ghost" onClick={() => void saveDraft()} disabled={saving}>{saving ? <Loader2 className="animate-spin"/> : "save draft"}</Button></header><div className="grid gap-5 md:grid-cols-[1fr_1.15fr]"><div className="flex flex-col gap-3">{clip ? <div className="aspect-video overflow-hidden rounded-2xl border border-border bg-muted">{clip.kind === "video" ? <video src={clip.url} controls className="size-full object-contain"/> : <img src={clip.url} alt="edited preview" className="size-full object-contain" style={previewStyle}/>}</div> : <div className="flex aspect-video items-center justify-center rounded-2xl border border-dashed border-border bg-card text-xs text-muted-foreground">text-only post</div>}{song && <div className="rounded-xl bg-primary-soft p-3 text-xs"><Music2 className="mr-1.5 inline size-4"/>song playing is: <strong>{song.title} — {song.artist}</strong></div>}<div className="rounded-2xl border border-border bg-card p-3"><p className="lowkey mb-2 text-xs font-bold text-muted-foreground">who can see this</p><div className="flex flex-wrap gap-1.5"><Button size="sm" variant={communityId === null ? "default" : "secondary"} onClick={() => setCommunityId(null)}>everyone ({me?.ageBand === "under_18" ? "under 18" : "18+"})</Button>{myCommunities.map((c) => <Button key={c.id} size="sm" variant={communityId === c.id ? "default" : "secondary"} onClick={() => setCommunityId(c.id)}>{c.emoji} {c.name}</Button>)}</div></div></div><div className="space-y-4"><label className="block"><span className="lowkey text-xs font-bold text-muted-foreground">title · optional</span><input value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} placeholder="give it a title" className="mt-1 w-full rounded-xl border border-input bg-card px-3.5 py-2.5 font-display text-lg font-bold outline-none"/></label><label className="block"><span className="lowkey text-xs font-bold text-muted-foreground">caption &amp; #hashtags</span><textarea value={caption} maxLength={280} rows={4} onChange={(e) => setCaption(e.target.value)} placeholder="say it lowkey… add #tags" className="mt-1 w-full resize-none rounded-xl border border-input bg-card p-3.5 outline-none"/><span className="block text-right text-xs text-muted-foreground">{caption.length}/280</span></label><div className="flex flex-wrap gap-1.5">{suggestedTags.map((tg) => <button key={tg} type="button" onClick={() => setCaption((c) => c.includes(`#${tg}`) ? c : `${c.trim()} #${tg}`.trim())} className="lowkey rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-primary-soft hover:text-foreground">#{tg}</button>)}</div><div><p className="lowkey mb-2 text-xs font-bold text-muted-foreground">topic</p><div className="flex flex-wrap gap-1.5">{INTERESTS.slice(0,12).map((t) => <Button key={t} size="sm" variant={topic === t ? "default" : "secondary"} onClick={() => setTopic(topic === t ? null : t)}>{t}</Button>)}</div></div><Button className="h-12 w-full rounded-full text-base font-bold" disabled={posting} onClick={() => void publish()}>post now <ArrowRight className="ml-2 size-4"/></Button></div></div></div>;
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => cameraInput.current?.click()}
+            className="lk-card flex flex-col items-center gap-2.5 p-4 transition-all hover:bg-primary-soft/40 active:scale-95"
+          >
+            <span className="lk-pill-icon h-10 w-13">
+              <Camera className="size-5" strokeWidth={2.3} />
+            </span>
+            <span className="lowkey text-sm font-bold">camera</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setClips([]); setStep("details"); }}
+            className="lk-card flex flex-col items-center gap-2.5 p-4 transition-all hover:bg-primary-soft/40 active:scale-95"
+          >
+            <span className="lk-pill-icon h-10 w-13">
+              <FileText className="size-5" strokeWidth={2.3} />
+            </span>
+            <span className="lowkey text-sm font-bold">text post</span>
+          </button>
+        </div>
 
-  return <div className="flex min-h-[calc(100dvh-8rem)] flex-col bg-background"><header className="flex h-14 shrink-0 items-center justify-between border-b border-border px-3"><Button size="icon" variant="ghost" onClick={() => setStep("start")} aria-label="back"><ArrowLeft/></Button><div className="text-center"><p className="lowkey font-display font-bold">edit</p><p className="text-[11px] text-muted-foreground">{clips.length} {clips.length === 1 ? "item" : "items"}</p></div><Button variant="ghost" onClick={() => void saveDraft()} disabled={saving}>{saving ? <Loader2 className="animate-spin"/> : <Save className="size-4"/>}</Button></header><div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-foreground/95 p-4"><div ref={previewRef} className="relative flex max-h-[58dvh] w-full max-w-md items-center justify-center overflow-hidden rounded-lg">{clip?.kind === "video" ? <video src={clip.url} controls playsInline className="max-h-[58dvh] w-full object-contain" style={previewStyle}/> : clip ? <img src={clip.url} alt="editing preview" className="max-h-[58dvh] w-full object-contain" style={previewStyle}/> : null}{adjustments.text && <button type="button" aria-label="move text" onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); moveText(event.clientX, event.clientY); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) moveText(event.clientX, event.clientY); }} className="absolute max-w-[84%] cursor-move touch-none font-bold text-background drop-shadow-lg" style={{ left: `${adjustments.textX * 100}%`, top: `${adjustments.textY * 100}%`, transform: "translate(-50%, -50%)", fontSize: Math.min(adjustments.textSize, 64), textAlign: adjustments.textAlign }}>{adjustments.text}</button>}</div></div><div className="shrink-0 border-t border-border bg-background"><div className="max-h-52 overflow-y-auto px-4 py-3">{tool === "adjust" && <><Range label="light" value={adjustments.brightness} min={50} max={150} onChange={(v) => updateAdjustment("brightness",v)}/><Range label="contrast" value={adjustments.contrast} min={50} max={150} onChange={(v) => updateAdjustment("contrast",v)}/><Range label="saturation" value={adjustments.saturation} min={0} max={200} onChange={(v) => updateAdjustment("saturation",v)}/><Range label="warmth" value={adjustments.warmth} min={0} max={100} onChange={(v) => updateAdjustment("warmth",v)}/><Range label="fade" value={adjustments.fade} min={0} max={100} onChange={(v) => updateAdjustment("fade",v)}/></>}{tool === "transform" && <div className="flex items-center justify-center gap-3"><Button variant="secondary" onClick={() => updateAdjustment("rotation", (adjustments.rotation + 90) % 360)}><RotateCw/>rotate</Button><Button variant="secondary" onClick={() => updateAdjustment("flipX", !adjustments.flipX)}><FlipHorizontal2/>flip</Button><div className="min-w-36"><Range label="zoom" value={adjustments.zoom} min={1} max={2} step={.05} onChange={(v) => updateAdjustment("zoom",v)}/></div></div>}{tool === "text" && <div className="space-y-2"><input value={adjustments.text} maxLength={80} onChange={(e) => updateAdjustment("text",e.target.value)} placeholder="add text on your media" className="w-full rounded-xl border border-input bg-card px-3 py-2 outline-none"/><p className="lowkey flex items-center gap-1 text-xs text-muted-foreground"><Move className="size-3.5"/>drag the text on the preview to place it</p><div className="flex gap-2"><Button size="icon" variant={adjustments.textAlign === "left" ? "default" : "secondary"} onClick={() => updateAdjustment("textAlign","left")}><AlignLeft/></Button><Button size="icon" variant={adjustments.textAlign === "center" ? "default" : "secondary"} onClick={() => updateAdjustment("textAlign","center")}><AlignCenter/></Button><Button size="icon" variant={adjustments.textAlign === "right" ? "default" : "secondary"} onClick={() => updateAdjustment("textAlign","right")}><AlignRight/></Button><div className="flex-1"><Range label="size" value={adjustments.textSize} min={20} max={80} onChange={(v) => updateAdjustment("textSize",v)}/></div></div></div>}{tool === "clips" && <div><div className="flex gap-2 overflow-x-auto pb-2">{clips.map((c,i) => <button key={c.id} onClick={() => setActive(i)} className={`relative h-16 w-24 shrink-0 overflow-hidden rounded-lg border-2 ${active === i ? "border-primary" : "border-transparent"}`}>{c.kind === "video" ? <video src={c.url} className="size-full object-cover"/> : <img src={c.url} alt="" className="size-full object-cover"/>}<span className="absolute bottom-0 left-0 bg-background/80 px-1 text-[10px]">{i+1}</span></button>)}<Button variant="secondary" className="h-16 w-20 shrink-0" onClick={() => mediaInput.current?.click()}><Upload/></Button></div>{clip?.kind === "video" && <><Range label="starts" value={clip.trimStart} min={0} max={Math.max(.1,clip.trimEnd-.1)} step={.1} onChange={(v) => setClips((all) => all.map((c,i) => i === active ? {...c,trimStart:v}:c))}/><Range label="ends" value={clip.trimEnd} min={Math.min(clip.duration,clip.trimStart+.1)} max={clip.duration} step={.1} onChange={(v) => setClips((all) => all.map((c,i) => i === active ? {...c,trimEnd:v}:c))}/><Range label="speed" value={adjustments.speed} min={.5} max={2} step={.25} onChange={(v) => updateAdjustment("speed",v)}/><Range label="original vol" value={adjustments.originalVolume} min={0} max={100} onChange={(v) => updateAdjustment("originalVolume",v)}/></>}<div className="flex gap-2"><Button variant="secondary" disabled={active===0} onClick={() => moveClip(-1)}><ChevronUp/>earlier</Button><Button variant="secondary" disabled={active===clips.length-1} onClick={() => moveClip(1)}><ChevronDown/>later</Button><Button variant="destructive" onClick={() => { setClips((all)=>all.filter((_,i)=>i!==active));setActive(Math.max(0,active-1));}}><Trash2/>remove</Button></div></div>}{tool === "music" && <div><div className="mb-2 flex gap-2 overflow-x-auto pb-1">{CATALOG.map((track) => <Button key={track.id} className="shrink-0" variant={song?.id===track.id?"default":"secondary"} onClick={() => setSong(track)}><Play className="size-3"/>{track.title}</Button>)}<Button className="shrink-0" variant="outline" onClick={() => audioInput.current?.click()}><Upload/>your audio</Button></div>{song && <><p className="lowkey rounded-lg bg-primary-soft p-2 text-sm">song playing is: <strong>{song.title} — {song.artist}</strong></p><audio src={song.url} controls loop className="mt-2 w-full"/><Range label="song vol" value={adjustments.songVolume} min={0} max={100} onChange={(v) => updateAdjustment("songVolume",v)}/>{!song.catalog && <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)}/>i have permission to use this audio</label>}<Button variant="ghost" onClick={() => setSong(null)}>remove song</Button></>}</div>}</div><nav className="grid grid-cols-5 border-t border-border">{([{id:"adjust",icon:SlidersHorizontal,label:"adjust"},{id:"transform",icon:Crop,label:"crop"},{id:"text",icon:Type,label:"text"},{id:"clips",icon:Video,label:"clips"},{id:"music",icon:Music2,label:"music"}] as const).map(({id,icon:Icon,label}) => <Button key={id} variant="ghost" onClick={() => setTool(id)} className={`h-16 flex-col gap-1 rounded-none text-[11px] ${tool===id?"bg-primary-soft":""}`}><Icon className="size-5"/>{label}</Button>)}</nav><div className="flex gap-2 p-3"><Button variant="secondary" className="flex-1" onClick={() => void saveDraft()} disabled={saving}><Save/>{saving?"saving":"save draft"}</Button><Button className="flex-1" onClick={() => setStep("details")}>next <ArrowRight/></Button></div></div><input ref={mediaInput} type="file" accept="image/*,video/*,.heic,.heif" multiple className="hidden" onChange={(e) => void addFiles(e.target.files)}/><input ref={audioInput} type="file" accept="audio/*" className="hidden" onChange={(e) => void uploadSong(e.target.files?.[0])}/></div>;
+        <input ref={cameraInput} type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={(e) => void addFiles(e.target.files)} />
+        <input ref={mediaInput} type="file" accept="image/*,video/*,.heic,.heif" multiple className="hidden" onChange={(e) => void addFiles(e.target.files)} />
+
+        {drafts.length > 0 && (
+          <section className="space-y-2.5 pt-2">
+            <div className="flex items-center justify-between">
+              <h2 className="lowkey font-display text-base font-bold">saved drafts</h2>
+              <span className="lowkey rounded-xl bg-primary-soft px-2.5 py-0.5 text-xs font-bold">{drafts.length}</span>
+            </div>
+            <div className="space-y-2">
+              {drafts.map((d) => (
+                <div key={d.id} className="lk-card flex items-center gap-3 p-3">
+                  <span className="lk-pill-icon size-11 shrink-0">
+                    {d.kind === "video" ? <Video className="size-5" /> : <ImagePlus className="size-5" />}
+                  </span>
+                  <button type="button" className="min-w-0 flex-1 text-left" onClick={() => void resumeDraft(d)}>
+                    <p className="lowkey truncate text-sm font-bold">{d.title || d.caption || "untitled draft"}</p>
+                    <p className="lowkey text-xs text-muted-foreground">saved {new Date(d.updated_at).toLocaleDateString()}</p>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="delete draft"
+                    onClick={() => void deleteDraft(d.id)}
+                    className="flex size-9 items-center justify-center rounded-2xl text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive active:scale-90"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    );
+  }
+
+  if (step === "publish") {
+    return (
+      <div className="flex min-h-[calc(100dvh-8rem)] flex-col items-center justify-center px-8 text-center">
+        <ScribbleLoader label={renderProgress < 100 ? `editing ${renderProgress}%` : `uploading ${uploadProgress}%`} />
+        <div className="mt-4 h-2.5 w-full max-w-xs overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-primary transition-all"
+            style={{ width: `${renderProgress < 100 ? renderProgress : uploadProgress}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "details") {
+    return (
+      <div className="min-h-[calc(100dvh-8rem)] space-y-5 px-4 py-4 sm:px-6">
+        <header className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setStep(clips.length ? "edit" : "start")}
+            aria-label="back"
+            className="lk-pill-icon h-9 w-11"
+          >
+            <ArrowLeft className="size-5" />
+          </button>
+          <div className="flex items-center gap-1.5">
+            <span className="lowkey rounded-xl bg-muted px-2.5 py-1 text-[11px] font-bold text-muted-foreground">1 edit</span>
+            <span className="lowkey rounded-xl bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground shadow-xs">2 publish</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void saveDraft()}
+            disabled={saving}
+            className="lowkey lk-btn-soft h-9 px-3 text-xs"
+          >
+            {saving ? <Loader2 className="size-4 animate-spin" /> : "save draft"}
+          </button>
+        </header>
+
+        <div className="grid gap-5 md:grid-cols-[1fr_1.15fr]">
+          <div className="flex flex-col gap-3">
+            {clip ? (
+              <div className="lk-card aspect-video overflow-hidden bg-muted">
+                {clip.kind === "video" ? (
+                  <video src={clip.url} controls className="size-full object-contain" />
+                ) : (
+                  <img src={clip.url} alt="edited preview" className="size-full object-contain" style={previewStyle} />
+                )}
+              </div>
+            ) : (
+              <div className="lk-card flex aspect-video flex-col items-center justify-center gap-2 border-dashed text-xs text-muted-foreground">
+                <span className="lk-pill-icon h-10 w-12">
+                  <FileText className="size-5" />
+                </span>
+                <span className="lowkey font-semibold">text-only post</span>
+              </div>
+            )}
+            {song && (
+              <div className="flex items-center gap-2.5 rounded-2xl bg-primary-soft p-3 text-xs">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs">
+                  <Music2 className="size-4" />
+                </span>
+                <span className="lowkey truncate">song playing is: <strong>{song.title} — {song.artist}</strong></span>
+              </div>
+            )}
+            <div className="lk-card p-3.5">
+              <p className="lowkey mb-2 text-xs font-bold text-muted-foreground">who can see this</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCommunityId(null)}
+                  className={`lowkey rounded-2xl px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
+                    communityId === null ? "bg-primary text-primary-foreground shadow-xs" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  everyone ({me?.ageBand === "under_18" ? "under 18" : "18+"})
+                </button>
+                {myCommunities.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setCommunityId(c.id)}
+                    className={`lowkey rounded-2xl px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
+                      communityId === c.id ? "bg-primary text-primary-foreground shadow-xs" : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {c.emoji} {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <label className="block">
+              <span className="lowkey text-xs font-bold text-muted-foreground">title · optional</span>
+              <input
+                value={title}
+                maxLength={60}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="give it a title"
+                className="mt-1 w-full rounded-2xl border border-input bg-card px-4 py-2.5 font-display text-lg font-bold outline-none"
+              />
+            </label>
+            <label className="block">
+              <span className="lowkey text-xs font-bold text-muted-foreground">caption &amp; #hashtags</span>
+              <textarea
+                value={caption}
+                maxLength={280}
+                rows={4}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="say it lowkey… add #tags"
+                className="mt-1 w-full resize-none rounded-2xl border border-input bg-card p-3.5 outline-none"
+              />
+              <span className="block text-right text-xs text-muted-foreground">{caption.length}/280</span>
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {suggestedTags.map((tg) => (
+                <button
+                  key={tg}
+                  type="button"
+                  onClick={() => setCaption((c) => (c.includes(`#${tg}`) ? c : `${c.trim()} #${tg}`.trim()))}
+                  className="lowkey rounded-xl bg-primary-soft/70 px-2.5 py-1 text-[11px] font-bold text-foreground transition-all hover:bg-primary hover:text-primary-foreground active:scale-95"
+                >
+                  #{tg}
+                </button>
+              ))}
+            </div>
+            <div>
+              <p className="lowkey mb-2 text-xs font-bold text-muted-foreground">topic</p>
+              <div className="flex flex-wrap gap-1.5">
+                {INTERESTS.slice(0, 12).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTopic(topic === t ? null : t)}
+                    className={`lowkey rounded-2xl px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
+                      topic === t ? "bg-primary text-primary-foreground shadow-xs" : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="lowkey lk-btn-primary h-12 w-full text-base"
+              disabled={posting}
+              onClick={() => void publish()}
+            >
+              post now <ArrowRight className="size-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-[calc(100dvh-8rem)] flex-col bg-background">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card/95 px-3 backdrop-blur-xl">
+        <button type="button" onClick={() => setStep("start")} aria-label="back" className="lk-pill-icon h-9 w-10">
+          <ArrowLeft className="size-5" />
+        </button>
+        <div className="flex items-center gap-1.5">
+          <span className="lowkey rounded-xl bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground shadow-xs">
+            1 edit · {clips.length} {clips.length === 1 ? "item" : "items"}
+          </span>
+          <span className="lowkey rounded-xl bg-muted px-2.5 py-1 text-[11px] font-bold text-muted-foreground">2 publish</span>
+        </div>
+        <button type="button" onClick={() => void saveDraft()} disabled={saving} aria-label="save draft" className="lk-pill-icon h-9 w-10">
+          {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+        </button>
+      </header>
+
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-foreground/95 p-4">
+        <div ref={previewRef} className="relative flex max-h-[56dvh] w-full max-w-md items-center justify-center overflow-hidden rounded-2xl">
+          {clip?.kind === "video" ? (
+            <video src={clip.url} controls playsInline className="max-h-[56dvh] w-full object-contain" style={previewStyle} />
+          ) : clip ? (
+            <img src={clip.url} alt="editing preview" className="max-h-[56dvh] w-full object-contain" style={previewStyle} />
+          ) : null}
+          {adjustments.text && (
+            <button
+              type="button"
+              aria-label="move text"
+              onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); moveText(event.clientX, event.clientY); }}
+              onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) moveText(event.clientX, event.clientY); }}
+              className="absolute max-w-[84%] cursor-move touch-none font-bold text-background drop-shadow-lg"
+              style={{ left: `${adjustments.textX * 100}%`, top: `${adjustments.textY * 100}%`, transform: "translate(-50%, -50%)", fontSize: Math.min(adjustments.textSize, 64), textAlign: adjustments.textAlign }}
+            >
+              {adjustments.text}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="shrink-0 border-t border-border bg-card/95">
+        <div className="max-h-52 overflow-y-auto px-4 py-3">
+          {tool === "adjust" && (
+            <>
+              <Range label="light" value={adjustments.brightness} min={50} max={150} onChange={(v) => updateAdjustment("brightness", v)} />
+              <Range label="contrast" value={adjustments.contrast} min={50} max={150} onChange={(v) => updateAdjustment("contrast", v)} />
+              <Range label="saturation" value={adjustments.saturation} min={0} max={200} onChange={(v) => updateAdjustment("saturation", v)} />
+              <Range label="warmth" value={adjustments.warmth} min={0} max={100} onChange={(v) => updateAdjustment("warmth", v)} />
+              <Range label="fade" value={adjustments.fade} min={0} max={100} onChange={(v) => updateAdjustment("fade", v)} />
+            </>
+          )}
+          {tool === "transform" && (
+            <div className="flex items-center justify-center gap-3">
+              <Button variant="secondary" className="rounded-2xl" onClick={() => updateAdjustment("rotation", (adjustments.rotation + 90) % 360)}><RotateCw />rotate</Button>
+              <Button variant="secondary" className="rounded-2xl" onClick={() => updateAdjustment("flipX", !adjustments.flipX)}><FlipHorizontal2 />flip</Button>
+              <div className="min-w-36"><Range label="zoom" value={adjustments.zoom} min={1} max={2} step={0.05} onChange={(v) => updateAdjustment("zoom", v)} /></div>
+            </div>
+          )}
+          {tool === "text" && (
+            <div className="space-y-2">
+              <input value={adjustments.text} maxLength={80} onChange={(e) => updateAdjustment("text", e.target.value)} placeholder="add text on your media" className="w-full rounded-2xl border border-input bg-background px-3.5 py-2 outline-none" />
+              <p className="lowkey flex items-center gap-1 text-xs text-muted-foreground"><Move className="size-3.5" />drag the text on the preview to place it</p>
+              <div className="flex gap-2">
+                <Button size="icon" className="rounded-2xl" variant={adjustments.textAlign === "left" ? "default" : "secondary"} onClick={() => updateAdjustment("textAlign", "left")}><AlignLeft /></Button>
+                <Button size="icon" className="rounded-2xl" variant={adjustments.textAlign === "center" ? "default" : "secondary"} onClick={() => updateAdjustment("textAlign", "center")}><AlignCenter /></Button>
+                <Button size="icon" className="rounded-2xl" variant={adjustments.textAlign === "right" ? "default" : "secondary"} onClick={() => updateAdjustment("textAlign", "right")}><AlignRight /></Button>
+                <div className="flex-1"><Range label="size" value={adjustments.textSize} min={20} max={80} onChange={(v) => updateAdjustment("textSize", v)} /></div>
+              </div>
+            </div>
+          )}
+          {tool === "clips" && (
+            <div>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {clips.map((c, i) => (
+                  <button key={c.id} onClick={() => setActive(i)} className={`relative h-16 w-24 shrink-0 overflow-hidden rounded-2xl border-2 ${active === i ? "border-primary" : "border-transparent"}`}>
+                    {c.kind === "video" ? <video src={c.url} className="size-full object-cover" /> : <img src={c.url} alt="" className="size-full object-cover" />}
+                    <span className="absolute bottom-1 left-1 rounded-lg bg-background/85 px-1.5 text-[10px] font-bold">{i + 1}</span>
+                  </button>
+                ))}
+                <button type="button" onClick={() => mediaInput.current?.click()} className="lk-pill-icon h-16 w-20 shrink-0"><Upload className="size-5" /></button>
+              </div>
+              {clip?.kind === "video" && (
+                <>
+                  <Range label="starts" value={clip.trimStart} min={0} max={Math.max(0.1, clip.trimEnd - 0.1)} step={0.1} onChange={(v) => setClips((all) => all.map((c, i) => (i === active ? { ...c, trimStart: v } : c)))} />
+                  <Range label="ends" value={clip.trimEnd} min={Math.min(clip.duration, clip.trimStart + 0.1)} max={clip.duration} step={0.1} onChange={(v) => setClips((all) => all.map((c, i) => (i === active ? { ...c, trimEnd: v } : c)))} />
+                  <Range label="speed" value={adjustments.speed} min={0.5} max={2} step={0.25} onChange={(v) => updateAdjustment("speed", v)} />
+                  <Range label="original vol" value={adjustments.originalVolume} min={0} max={100} onChange={(v) => updateAdjustment("originalVolume", v)} />
+                </>
+              )}
+              <div className="flex gap-2">
+                <Button variant="secondary" className="rounded-2xl" disabled={active === 0} onClick={() => moveClip(-1)}><ChevronUp />earlier</Button>
+                <Button variant="secondary" className="rounded-2xl" disabled={active === clips.length - 1} onClick={() => moveClip(1)}><ChevronDown />later</Button>
+                <Button variant="destructive" className="rounded-2xl" onClick={() => { setClips((all) => all.filter((_, i) => i !== active)); setActive(Math.max(0, active - 1)); }}><Trash2 />remove</Button>
+              </div>
+            </div>
+          )}
+          {tool === "music" && (
+            <div>
+              <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
+                {CATALOG.map((track) => (
+                  <Button key={track.id} className="shrink-0 rounded-2xl" variant={song?.id === track.id ? "default" : "secondary"} onClick={() => setSong(track)}>
+                    <Play className="size-3" />{track.title}
+                  </Button>
+                ))}
+                <Button className="shrink-0 rounded-2xl" variant="outline" onClick={() => audioInput.current?.click()}><Upload />your audio</Button>
+              </div>
+              {song && (
+                <>
+                  <p className="lowkey rounded-2xl bg-primary-soft p-2.5 text-sm">song playing is: <strong>{song.title} — {song.artist}</strong></p>
+                  <audio src={song.url} controls loop className="mt-2 w-full" />
+                  <Range label="song vol" value={adjustments.songVolume} min={0} max={100} onChange={(v) => updateAdjustment("songVolume", v)} />
+                  {!song.catalog && (
+                    <label className="flex min-h-11 items-center gap-3 text-sm">
+                      <input type="checkbox" checked={rights} onChange={(e) => setRights(e.target.checked)} />i have permission to use this audio
+                    </label>
+                  )}
+                  <Button variant="ghost" onClick={() => setSong(null)}>remove song</Button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        <nav className="grid grid-cols-5 border-t border-border px-1 py-1.5">
+          {([
+            { id: "adjust", icon: SlidersHorizontal, label: "adjust" },
+            { id: "transform", icon: Crop, label: "crop" },
+            { id: "text", icon: Type, label: "text" },
+            { id: "clips", icon: Video, label: "clips" },
+            { id: "music", icon: Music2, label: "music" },
+          ] as const).map(({ id, icon: Icon, label }) => {
+            const activeTool = tool === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTool(id)}
+                className="flex flex-col items-center justify-center gap-1 py-1 transition-all active:scale-90"
+              >
+                <span
+                  className={`flex h-8 w-11 items-center justify-center rounded-2xl transition-colors ${
+                    activeTool ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground"
+                  }`}
+                >
+                  <Icon className="size-5" strokeWidth={activeTool ? 2.4 : 2} />
+                </span>
+                <span className={`lowkey text-[10px] ${activeTool ? "font-bold text-foreground" : "text-muted-foreground"}`}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="flex gap-2 p-3">
+          <button type="button" className="lowkey lk-btn-soft h-11 flex-1 text-sm" onClick={() => void saveDraft()} disabled={saving}>
+            <Save className="size-4" />{saving ? "saving" : "save draft"}
+          </button>
+          <button type="button" className="lowkey lk-btn-primary h-11 flex-1 text-sm" onClick={() => setStep("details")}>
+            next <ArrowRight className="size-4" />
+          </button>
+        </div>
+      </div>
+      <input ref={mediaInput} type="file" accept="image/*,video/*,.heic,.heif" multiple className="hidden" onChange={(e) => void addFiles(e.target.files)} />
+      <input ref={audioInput} type="file" accept="audio/*" className="hidden" onChange={(e) => void uploadSong(e.target.files?.[0])} />
+    </div>
+  );
 }
