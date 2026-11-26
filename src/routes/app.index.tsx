@@ -296,7 +296,9 @@ function FeedCard({ post }: { post: Post }) {
                 )}
                 {/* text + image: the caption belongs under the picture, not swallowed by it */}
                 {post.caption && post.caption !== "no caption" && (
-                  <p className="lowkey mt-2 text-sm leading-snug break-words">{post.caption}</p>
+                  <p className="lowkey mt-2 text-sm leading-snug break-words">
+                    <CaptionText text={post.caption} />
+                  </p>
                 )}
               </>
             ) : (
@@ -382,7 +384,11 @@ function FullscreenPhoto({ post, authorHandle, liked, saved, likeCount, onClose,
         <img src={post.mediaUrl ?? ""} alt={post.caption} className="size-full object-contain" />
       </button>
       <div className="shrink-0 border-t border-background/20 bg-foreground px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        {post.caption && post.caption !== "no caption" && <p className="lowkey mb-3 text-sm">{post.caption}</p>}
+        {post.caption && post.caption !== "no caption" && (
+          <p className="lowkey mb-3 text-sm">
+            <CaptionText text={post.caption} />
+          </p>
+        )}
         {post.songTitle && <div className="lowkey mb-3 text-xs"><p className="flex items-center gap-2"><Music2 className="size-4"/>song playing is: <strong>{post.songTitle} — {post.songArtist}</strong></p>{post.audioUrl && <audio src={post.audioUrl} controls className="mt-2 h-8 w-full" />}</div>}
         <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={onLike}><Heart className={liked ? "fill-primary text-primary" : ""}/>{likeCount}</Button>

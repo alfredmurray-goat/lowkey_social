@@ -47,6 +47,22 @@
 - own supabase project instead of managed backend (workspace-admin action, blocked)
 - [done] kids-first update (plan 2026-11-26): onboarding v2 + catch-up, city aliases, communities + QR invites + group-to-community conversion, hashtags, admin super posts, PWA opens on /app, uploaded drawing loader with background removed, YouTube-style studio create page, settings overhaul, automatic video subtitles, modern icons & polish
 
+## verified live 2026-11-26 (signed-in browser audit)
+- feed, videos, settings, search all render signed-in with zero console errors; admin dashboard
+  is role-gated (non-admin bounced to /app) and shows overview/reports/users/feeds/super posts
+- community create -> chip in the feed toggle row -> community page with feed/members/qr invite/
+  settings; QR renders and "copy invite link" / "reset" are there
+- admin super post pins to the top of the feed labelled "from lowkey_social"
+- caption #tags are tappable and open /app/tag/$tag
+- city alias tests pass (3), typecheck clean
+- fixed: create_community / convert_group_to_community / reset_community_invite crashed on
+  gen_random_bytes (pgcrypto lives in the extensions schema, functions pin search_path=public),
+  so community creation was dead -> migration 0016 uses gen_random_uuid()
+- fixed: home-feed captions and the full-screen photo caption were plain text, so #tags were not
+  links there -> CaptionText now renders them (also inside the text-post poster card)
+- still unverified: installed home-screen PWA launch on a real phone; joining a community with a
+  second real account; email notifications (blocked on the email domain)
+
 ## backend ownership (open decision)
 - user wants their own supabase project + api keys instead of the managed cloud backend
 - blocked on me: disconnecting the managed backend is a workspace-admin action (cloud tab -> advanced) and is irreversible; connecting a byo supabase project is done in project settings

@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useLowkey, useTodayUsage } from "@/lib/lowkey/store";
 import logoAsset from "@/assets/lowkey-logo.png.asset.json";
 import { ReadAloud } from "@/components/lowkey/readaloud";
+import { CaptionText } from "@/components/lowkey/caption-text";
 import { ScribbleLoader } from "@/components/lowkey/scribble-loader";
 
 export function Avatar({
@@ -97,7 +98,9 @@ export function Poster({
         background: `linear-gradient(150deg, oklch(0.9 0.11 ${hue}), oklch(0.78 0.13 ${hue + 40}))`,
       }}
     >
-      <p className="lowkey text-lg leading-tight font-medium text-foreground/70">{caption}</p>
+      <p className="lowkey text-lg leading-tight font-medium text-foreground/70">
+        <CaptionText text={caption} />
+      </p>
     </div>
   );
 }
