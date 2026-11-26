@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Check, Users, X } from "lucide-react";
+import { Check, ChevronRight, MessageCircleHeart, Users, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppScreen, Avatar, StreakPill } from "@/components/lowkey/shell";
 import { useLowkey, useMyConversations } from "@/lib/lowkey/store";
@@ -25,19 +25,33 @@ function ChatsPage() {
 
   return (
     <AppScreen>
-      <div className="flex items-center justify-between px-4 pt-5">
-        <h1 className="lowkey text-2xl font-extrabold tracking-tight">chats</h1>
+      <div className="flex items-center justify-between gap-3 px-4 pt-5 pb-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-13 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-xs">
+            <MessageCircleHeart className="size-6" strokeWidth={2.4} />
+          </span>
+          <div>
+            <h1 className="lowkey font-display text-2xl leading-tight font-bold">chats</h1>
+            <p className="lowkey text-xs text-muted-foreground">dms &amp; group streaks</p>
+          </div>
+        </div>
         <button
           onClick={() => setOpen(true)}
-          className="lowkey flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm active:scale-95"
+          className="lowkey lk-btn-primary h-10 px-4 text-sm"
         >
           <Users className="size-4" /> new group
         </button>
       </div>
-      <ul className="mt-3 flex flex-col gap-1 px-2">
+      <ul className="flex flex-col gap-2.5 px-4 pb-6">
         {chats.length === 0 && (
-          <li className="lowkey mx-2 rounded-3xl bg-card p-8 text-center text-sm text-muted-foreground">
-            no chats yet. follow someone and say hi, or start a group.
+          <li className="lk-card flex flex-col items-center gap-3 p-8 text-center">
+            <span className="lk-pill-icon h-12 w-15">
+              <MessageCircleHeart className="size-6" strokeWidth={2.3} />
+            </span>
+            <p className="lowkey text-sm font-bold">no chats yet</p>
+            <p className="lowkey text-xs text-muted-foreground">
+              follow someone and say hi, or start a group chat.
+            </p>
           </li>
         )}
         {chats.map(({ conversation, other, members, lastMessage, unread, streak }) => (
@@ -45,23 +59,26 @@ function ChatsPage() {
             <Link
               to="/app/chat/$id"
               params={{ id: conversation.id }}
-              className="flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors hover:bg-muted"
+              className={`lk-card flex items-center gap-3 p-3.5 transition-all hover:bg-primary-soft/35 active:scale-[0.99] ${
+                unread ? "border-primary/70" : ""
+              }`}
             >
               {conversation.isGroup ? (
-                <span className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft">
-                  <Users className="size-5" />
+                <span className="lk-pill-icon size-11 shrink-0 text-lg">
+                  {conversation.emoji || <Users className="size-5" />}
                 </span>
               ) : (
                 <Avatar
                   hue={other.avatarHue}
                   label={other.displayName}
                   src={other.avatarUrl}
+                  size={44}
                   ring={unread}
                 />
               )}
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
-                  <span className="lowkey truncate text-sm font-semibold">
+                  <span className="lowkey truncate text-sm font-bold">
                     {conversation.isGroup
                       ? (conversation.title ?? "group")
                       : `@${other.handle}`}
@@ -69,7 +86,7 @@ function ChatsPage() {
                   {!conversation.isGroup && <StreakPill count={streak} />}
                 </span>
                 <span
-                  className={`lowkey block truncate text-xs ${
+                  className={`lowkey mt-0.5 block truncate text-xs ${
                     unread ? "font-semibold text-foreground" : "text-muted-foreground"
                   }`}
                 >
@@ -80,7 +97,13 @@ function ChatsPage() {
                       : "say something")}
                 </span>
               </span>
-              {unread && <span className="size-2.5 rounded-full bg-primary" />}
+              {unread ? (
+                <span className="lowkey rounded-xl bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground shadow-xs">
+                  new
+                </span>
+              ) : (
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
+              )}
             </Link>
           </li>
         ))}
@@ -121,8 +144,13 @@ function NewGroupSheet({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/30 backdrop-blur-sm sm:items-center">
       <div className="flex max-h-[85vh] w-full max-w-lg flex-col gap-4 rounded-t-3xl bg-background p-5 shadow-xl animate-fade-in sm:rounded-3xl">
         <div className="flex items-center justify-between">
-          <h2 className="lowkey text-lg font-bold">new group</h2>
-          <button onClick={onClose} aria-label="close" className="rounded-full p-2 hover:bg-muted">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-xs">
+              <Users className="size-5" strokeWidth={2.3} />
+            </span>
+            <h2 className="lowkey font-display text-lg font-bold">new group</h2>
+          </div>
+          <button onClick={onClose} aria-label="close" className="lk-pill-icon h-9 w-10">
             <X className="size-5" />
           </button>
         </div>
@@ -153,8 +181,8 @@ function NewGroupSheet({ onClose }: { onClose: () => void }) {
                   <Avatar hue={p.avatarHue} label={p.displayName} src={p.avatarUrl} size={36} />
                   <span className="lowkey flex-1 truncate text-sm font-semibold">@{p.handle}</span>
                   <span
-                    className={`flex size-6 items-center justify-center rounded-full border-2 ${
-                      on ? "border-primary bg-primary text-primary-foreground" : "border-input"
+                    className={`flex size-6 items-center justify-center rounded-xl border-2 transition-colors ${
+                      on ? "border-primary bg-primary text-primary-foreground shadow-xs" : "border-input"
                     }`}
                   >
                     {on && <Check className="size-3.5" />}
@@ -167,7 +195,7 @@ function NewGroupSheet({ onClose }: { onClose: () => void }) {
         <button
           disabled={busy || picked.length < 2 || !title.trim()}
           onClick={() => void create()}
-          className="lowkey min-h-12 rounded-full bg-primary text-sm font-bold text-primary-foreground disabled:opacity-50"
+          className="lowkey lk-btn-primary min-h-12 text-sm disabled:opacity-50"
         >
           {busy ? "making it..." : "start group"}
         </button>

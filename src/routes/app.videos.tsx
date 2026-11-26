@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BadgeCheck, Bookmark, Captions, Heart, MessageSquare, Music2, Play, Send, Volume2, VolumeX } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppScreen, Poster } from "@/components/lowkey/shell";
 import { CommentsSheet } from "@/components/lowkey/comments";
 import { CaptionText } from "@/components/lowkey/caption-text";
@@ -50,27 +50,36 @@ function VideoCard({
   const [subLine, setSubLine] = useState("");
   const songRef = useRef<HTMLAudioElement | null>(null);
 
-  // Automatic timed subtitles generated from the video's caption
-  useEffect(() => {
-    if (!showSubs || !post.caption.trim()) {
+  const subChunks = useMemo(() => {
+    if (!post.caption.trim()) return [];
+    const words = post.caption.trim().split(/\s+/);
+    const chunks: string[] = [];
+    for (let i = 0; i < words.length; i += 5) {
+      chunks.push(words.slice(i, i + 5).join(" "));
+    }
+    return chunks;
+  }, [post.caption]);
+
+  const syncSubtitle = (el: HTMLVideoElement | null) => {
+    if (!showSubs || subChunks.length === 0) {
       setSubLine("");
       return;
     }
-    const words = post.caption.trim().split(/\s+/);
-    const chunks: string[] = [];
-    for (let i = 0; i < words.length; i += 6) {
-      chunks.push(words.slice(i, i + 6).join(" "));
+    if (!el) {
+      setSubLine(subChunks[0] ?? "");
+      return;
     }
-    if (chunks.length === 0) return;
-    let idx = 0;
-    setSubLine(chunks[0] ?? "");
-    if (chunks.length === 1) return;
-    const id = window.setInterval(() => {
-      idx = (idx + 1) % chunks.length;
-      setSubLine(chunks[idx] ?? "");
-    }, 2400);
-    return () => window.clearInterval(id);
-  }, [showSubs, post.caption]);
+    const dur = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : 0;
+    const idx =
+      dur > 0
+        ? Math.min(subChunks.length - 1, Math.floor(((el.currentTime % dur) / dur) * subChunks.length))
+        : Math.floor(el.currentTime / 2.2) % subChunks.length;
+    setSubLine(subChunks[idx] ?? "");
+  };
+
+  useEffect(() => {
+    syncSubtitle(ref.current);
+  }, [showSubs, subChunks]);
 
   // keep the song in step with the video: plays/pauses together, follows mute
   useEffect(() => {
@@ -127,6 +136,8 @@ function VideoCard({
               muted={muted}
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
+              onTimeUpdate={(e) => syncSubtitle(e.currentTarget)}
+              onLoadedMetadata={(e) => syncSubtitle(e.currentTarget)}
             />
             <button
               aria-label={playing ? "pause video" : "play video"}
@@ -151,15 +162,15 @@ function VideoCard({
                 if (muted && playing) void songRef.current?.play().catch(() => undefined);
               }}
               aria-label={muted ? "unmute" : "mute"}
-              className="absolute top-4 left-4 flex size-10 items-center justify-center rounded-full bg-background/80"
+              className="absolute top-4 left-4 flex h-10 w-11 items-center justify-center rounded-2xl bg-card/85 shadow-xs backdrop-blur-sm transition-transform active:scale-90"
             >
               {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
             </button>
             <button
               onClick={onToggleSubs}
               aria-label={showSubs ? "hide subtitles" : "show subtitles"}
-              className={`absolute top-16 left-4 flex size-10 items-center justify-center rounded-full ${
-                showSubs ? "bg-primary text-primary-foreground" : "bg-background/80 text-foreground"
+              className={`absolute top-16 left-4 flex h-10 w-11 items-center justify-center rounded-2xl shadow-xs backdrop-blur-sm transition-all active:scale-90 ${
+                showSubs ? "bg-primary text-primary-foreground" : "bg-card/85 text-foreground"
               }`}
             >
               <Captions className="size-4" />
@@ -258,7 +269,7 @@ function VideosPage() {
   const { state, me } = useLowkey();
   const allVideos = useBandPosts("video");
   const [muted, setMuted] = useState(true);
-  const [showSubs, setShowSubs] = useState(true);
+  const [showSubs, setShowSubs] = useState(false);
   const [selectedCommunity, setSelectedCommunity] = useState<string>("all");
   const [openComments, setOpenComments] = useState<string | null>(null);
 
