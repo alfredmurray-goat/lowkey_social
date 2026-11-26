@@ -1085,6 +1085,10 @@ export type Database = {
         Args: { _conv: string; _members: string[] }
         Returns: undefined
       }
+      can_read_storage_object: {
+        Args: { _bucket_id: string; _name: string; _owner_id: string }
+        Returns: boolean
+      }
       convert_group_to_community: {
         Args: { _conv: string; _emoji?: string; _name?: string }
         Returns: string
