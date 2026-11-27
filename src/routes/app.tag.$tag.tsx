@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Hash } from "lucide-react";
+import { ArrowLeft, Flame, Hash } from "lucide-react";
 import { AppScreen, Avatar, Poster } from "@/components/lowkey/shell";
 import { CaptionText } from "@/components/lowkey/caption-text";
+import { getTrendingTags } from "@/lib/lowkey/rank";
 import { useBandPosts, useLowkey } from "@/lib/lowkey/store";
 
 export const Route = createFileRoute("/app/tag/$tag")({
@@ -27,6 +28,7 @@ function TagPage() {
   const posts = bandPosts.filter(
     (p) => taggedIds.has(p.id) || p.caption.toLowerCase().includes(`#${cleanTag}`),
   );
+  const trending = getTrendingTags(bandPosts, state.hashtags, Date.now(), 8);
 
   return (
     <AppScreen title={`#${cleanTag}`}>
@@ -44,6 +46,26 @@ function TagPage() {
           </p>
         </div>
       </div>
+
+      {trending.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-border px-4 py-3">
+          <span className="lowkey inline-flex shrink-0 items-center gap-1 text-xs font-bold text-muted-foreground">
+            <Flame className="size-3.5 text-primary" /> trending
+          </span>
+          {trending.map((t) => (
+            <Link
+              key={t.tag}
+              to="/app/tag/$tag"
+              params={{ tag: t.tag }}
+              className={`lowkey shrink-0 rounded-full px-3 py-1.5 text-xs font-bold transition-transform active:scale-95 ${
+                t.tag === cleanTag ? "bg-primary text-primary-foreground" : "bg-primary-soft text-foreground"
+              }`}
+            >
+              #{t.tag}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {posts.length === 0 ? (
         <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">

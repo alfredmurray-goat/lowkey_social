@@ -14,6 +14,13 @@ import type { Json } from "@/integrations/supabase/types";
 import { parseInstagramExport } from "./instagram";
 import { prepareImage } from "./image";
 import {
+  getPostTags,
+  rankFeedPosts,
+  readTagAffinity,
+  recordTagSignal,
+  SESSION_FEED_SEED,
+} from "./rank";
+import {
   dayKey,
   emptyState,
   type AgeBand,
@@ -962,11 +969,14 @@ title: input.title?.trim() ? input.title.trim().toLowerCase() : null,
         return;
       }
       if (!has) {
-        const author = state.posts.find((p) => p.id === postId)?.authorId;
-        if (author) await notify(author, "like", postId);
+        const post = state.posts.find((p) => p.id === postId);
+        if (post) {
+          recordTagSignal(getPostTags(post, state.hashtags), 2);
+          await notify(post.authorId, "like", postId);
+        }
       }
     },
-    [refresh, notify, state.likes, state.posts],
+    [refresh, notify, state.likes, state.posts, state.hashtags],
   );
 
   const addComment = useCallback(
@@ -994,10 +1004,13 @@ title: input.title?.trim() ? input.title.trim().toLowerCase() : null,
           },
         ],
       }));
-      const author = state.posts.find((p) => p.id === postId)?.authorId;
-      if (author) await notify(author, "comment", postId);
+      const post = state.posts.find((p) => p.id === postId);
+      if (post) {
+        recordTagSignal(getPostTags(post, state.hashtags), 2.5);
+        await notify(post.authorId, "comment", postId);
+      }
     },
-    [notify, state.posts],
+    [notify, state.posts, state.hashtags],
   );
 
   const toggleFollow = useCallback(
@@ -1040,8 +1053,12 @@ title: input.title?.trim() ? input.title.trim().toLowerCase() : null,
         ? await supabase.from("bookmarks").delete().eq("post_id", postId).eq("profile_id", id)
         : await supabase.from("bookmarks").insert({ post_id: postId, profile_id: id });
       if (error) await refresh();
+      else if (!has) {
+        const post = state.posts.find((p) => p.id === postId);
+        if (post) recordTagSignal(getPostTags(post, state.hashtags), 3);
+      }
     },
-    [refresh, state.bookmarks],
+    [refresh, state.bookmarks, state.posts, state.hashtags],
   );
 
   const markNotificationsRead = useCallback(async () => {
@@ -1732,16 +1749,21 @@ export function useBandPosts(kind?: PostKind) {
   const { state, me } = useLowkey();
   return useMemo(() => {
     if (!me?.ageBand) return [];
-    const interests = me.interests ?? [];
-    return state.posts
-      .filter((p) => p.ageBand === me.ageBand && (!kind || p.kind === kind))
-      .sort((a, b) => {
-        // your onboarding interests float to the top, then newest first
-        const score = (p: typeof a) => (p.topic && interests.includes(p.topic) ? 1 : 0);
-        const diff = score(b) - score(a);
-        return diff !== 0 ? diff : b.createdAt.localeCompare(a.createdAt);
-      });
-  }, [state.posts, me, kind]);
+    const filtered = state.posts.filter(
+      (p) => p.ageBand === me.ageBand && (!kind || p.kind === kind),
+    );
+    const followingIds = new Set(
+      state.follows.filter((f) => f.followerId === me.id).map((f) => f.followingId),
+    );
+    return rankFeedPosts({
+      posts: filtered,
+      hashtags: state.hashtags,
+      interests: me.interests ?? [],
+      followingIds,
+      affinity: readTagAffinity(),
+      seed: SESSION_FEED_SEED,
+    });
+  }, [state.posts, state.hashtags, state.follows, me, kind]);
 }
 
 export function useMyConversations() {

@@ -195,10 +195,10 @@ export function TopBar({ title = "lowkey_social" }: { title?: string }) {
   const unread = state.notifications.filter((n) => !n.readAt && n.recipientId === me?.id).length;
   const iconPill = (active: boolean) =>
     cn(
-      "relative flex h-9 w-10 items-center justify-center rounded-2xl transition-all duration-150 active:scale-90",
+      "relative flex h-8 w-12 items-center justify-center rounded-2xl transition-all duration-150 active:scale-90",
       active
         ? "bg-primary text-primary-foreground shadow-xs"
-        : "text-muted-foreground hover:bg-primary-soft/70 hover:text-foreground",
+        : "text-muted-foreground hover:text-foreground",
     );
   return (
     <header className="sticky top-0 z-20 grid grid-cols-[minmax(0,1fr)_auto] items-center border-b border-border bg-card/95 px-4 py-2.5 backdrop-blur-xl">
@@ -207,22 +207,22 @@ export function TopBar({ title = "lowkey_social" }: { title?: string }) {
         <span className="lowkey truncate font-display text-lg leading-5 font-bold">{title}</span>
         <BetaTag />
       </Link>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         <Link
           to="/app/saved"
           aria-label="saved posts"
           className={iconPill(pathname.startsWith("/app/saved"))}
         >
-          <Bookmark className="size-[20px]" strokeWidth={pathname.startsWith("/app/saved") ? 2.4 : 2.1} />
+          <Bookmark className="size-[21px]" strokeWidth={pathname.startsWith("/app/saved") ? 2.4 : 1.9} />
         </Link>
         <Link
           to="/app/notifications"
           aria-label="notifications"
           className={iconPill(pathname.startsWith("/app/notifications"))}
         >
-          <Bell className="size-[20px]" strokeWidth={pathname.startsWith("/app/notifications") ? 2.4 : 2.1} />
+          <Bell className="size-[21px]" strokeWidth={pathname.startsWith("/app/notifications") ? 2.4 : 1.9} />
           {unread > 0 && (
-            <span className="absolute top-0.5 right-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground ring-2 ring-card">
+            <span className="absolute -top-0.5 right-1 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground ring-2 ring-card">
               {unread > 9 ? "9+" : unread}
             </span>
           )}
@@ -232,7 +232,7 @@ export function TopBar({ title = "lowkey_social" }: { title?: string }) {
           aria-label="search"
           className={iconPill(pathname.startsWith("/app/search"))}
         >
-          <Search className="size-[20px]" strokeWidth={pathname.startsWith("/app/search") ? 2.4 : 2.1} />
+          <Search className="size-[21px]" strokeWidth={pathname.startsWith("/app/search") ? 2.4 : 1.9} />
         </Link>
       </div>
     </header>

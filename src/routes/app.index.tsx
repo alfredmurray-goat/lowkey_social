@@ -297,7 +297,7 @@ function FeedCard({ post }: { post: Post }) {
                 {/* text + image: the caption belongs under the picture, not swallowed by it */}
                 {post.caption && post.caption !== "no caption" && (
                   <p className="lowkey mt-2 text-sm leading-snug break-words">
-                    <CaptionText text={post.caption} />
+                    <CaptionText text={post.caption} chips />
                   </p>
                 )}
               </>

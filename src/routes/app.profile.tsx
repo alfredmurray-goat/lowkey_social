@@ -43,7 +43,7 @@ const { state, me, uploadAvatar, updateProfile } = useLowkey();
 
   if (!me) return <AppScreen>{null}</AppScreen>;
 
-  const mine = state.posts.filter((p) => p.authorId === me.id && p.kind === tab);
+  const mine = state.posts.filter((p) => p.authorId === me.id && !p.communityId && p.kind === tab);
   const followers = state.follows.filter((f) => f.followingId === me.id).length;
   const following = state.follows.filter((f) => f.followerId === me.id).length;
 
@@ -52,7 +52,7 @@ const { state, me, uploadAvatar, updateProfile } = useLowkey();
     setEditingStatus(false);
     toast[res.ok ? "success" : "error"](res.ok ? "status saved" : res.error ?? "save failed");
   };
-  const postCount = state.posts.filter((p) => p.authorId === me.id).length;
+  const postCount = state.posts.filter((p) => p.authorId === me.id && !p.communityId).length;
   const pct = Math.min(100, Math.round((usage.minutes / Math.max(1, usage.limit)) * 100));
 
   return (

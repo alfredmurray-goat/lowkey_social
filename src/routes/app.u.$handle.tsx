@@ -43,7 +43,7 @@ function UserProfilePage() {
     void navigate({ to: "/app/profile", replace: true });
   }
 
-  const posts = state.posts.filter((p) => p.authorId === person.id && p.kind === tab);
+  const posts = state.posts.filter((p) => p.authorId === person.id && !p.communityId && p.kind === tab);
   const followers = state.follows.filter((f) => f.followingId === person.id).length;
   const following = state.follows.filter((f) => f.followerId === person.id).length;
   const iFollow = state.follows.some(

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AppScreen, Poster } from "@/components/lowkey/shell";
 import { CommentsSheet } from "@/components/lowkey/comments";
 import { CaptionText } from "@/components/lowkey/caption-text";
+import { extractTagsFromCaption, recordTagSignal } from "@/lib/lowkey/rank";
 import { useBandPosts, useLowkey } from "@/lib/lowkey/store";
 import type { Post } from "@/lib/lowkey/types";
 
@@ -136,7 +137,15 @@ function VideoCard({
               muted={muted}
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
-              onTimeUpdate={(e) => syncSubtitle(e.currentTarget)}
+              onTimeUpdate={(e) => {
+                syncSubtitle(e.currentTarget);
+                const el = e.currentTarget;
+                if (el.currentTime >= 4 && !el.dataset["tagLogged"]) {
+                  el.dataset["tagLogged"] = "1";
+                  const tags = extractTagsFromCaption(post.caption);
+                  if (tags.length > 0) recordTagSignal(tags, 1.5);
+                }
+              }}
               onLoadedMetadata={(e) => syncSubtitle(e.currentTarget)}
             />
             <button
@@ -250,7 +259,7 @@ function VideoCard({
           </div>
           {post.caption && (
             <p className="lowkey mt-1 text-xs">
-              <CaptionText text={post.caption} />
+              <CaptionText text={post.caption} chips />
             </p>
           )}
           {post.songTitle && (
