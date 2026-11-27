@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Flame, Hash } from "lucide-react";
+import { ArrowLeft, Flame, Hash, Sparkles } from "lucide-react";
 import { AppScreen, Avatar, Poster } from "@/components/lowkey/shell";
 import { CaptionText } from "@/components/lowkey/caption-text";
+import { isAiFeatureEnabled } from "@/lib/lowkey/ai-settings";
 import { getTrendingTags } from "@/lib/lowkey/rank";
 import { useBandPosts, useLowkey } from "@/lib/lowkey/store";
+import { useTagHubs } from "@/lib/lowkey/tag-hubs";
 
 export const Route = createFileRoute("/app/tag/$tag")({
   head: ({ params }) => ({
@@ -20,13 +22,19 @@ export const Route = createFileRoute("/app/tag/$tag")({
 function TagPage() {
   const { tag } = Route.useParams();
   const cleanTag = tag.toLowerCase().replace(/^#/, "");
-  const { state } = useLowkey();
+  const { state, me } = useLowkey();
   const bandPosts = useBandPosts();
+  const hubsOn = isAiFeatureEnabled(me?.aiSettings, "hubs");
+  const hubs = useTagHubs(hubsOn);
+  const activeHub = hubs.find((h) => h.name === cleanTag || h.tags.includes(cleanTag)) ?? null;
+  const matchTags = new Set(activeHub ? [cleanTag, ...activeHub.tags] : [cleanTag]);
   const taggedIds = new Set(
-    state.hashtags.filter((h) => h.tag === cleanTag).map((h) => h.postId),
+    state.hashtags.filter((h) => matchTags.has(h.tag)).map((h) => h.postId),
   );
   const posts = bandPosts.filter(
-    (p) => taggedIds.has(p.id) || p.caption.toLowerCase().includes(`#${cleanTag}`),
+    (p) =>
+      taggedIds.has(p.id) ||
+      [...matchTags].some((t) => p.caption.toLowerCase().includes(`#${t}`)),
   );
   const trending = getTrendingTags(bandPosts, state.hashtags, Date.now(), 8);
 
@@ -43,9 +51,30 @@ function TagPage() {
           <h1 className="lowkey text-lg font-extrabold">#{cleanTag}</h1>
           <p className="lowkey text-xs text-muted-foreground">
             {posts.length} {posts.length === 1 ? "post" : "posts"} in your band
+            {activeHub ? ` · hub: ${activeHub.tags.map((t) => `#${t}`).join(" ")}` : ""}
           </p>
         </div>
       </div>
+
+      {hubs.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-border px-4 py-2.5">
+          <span className="lowkey inline-flex shrink-0 items-center gap-1 text-xs font-bold text-muted-foreground">
+            <Sparkles className="size-3.5 text-primary" /> local hubs
+          </span>
+          {hubs.map((h) => (
+            <Link
+              key={h.id}
+              to="/app/tag/$tag"
+              params={{ tag: h.name }}
+              className={`lowkey shrink-0 rounded-full px-3 py-1.5 text-xs font-bold transition-transform active:scale-95 ${
+                activeHub?.id === h.id ? "bg-primary text-primary-foreground" : "bg-primary-soft text-foreground"
+              }`}
+            >
+              {h.name} ({h.tags.length})
+            </Link>
+          ))}
+        </div>
+      )}
 
       {trending.length > 0 && (
         <div className="flex items-center gap-2 overflow-x-auto border-b border-border px-4 py-3">

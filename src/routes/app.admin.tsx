@@ -6,6 +6,7 @@ import { AppScreen, Avatar, Poster, bandLabel } from "@/components/lowkey/shell"
 import { supabase } from "@/integrations/supabase/client";
 import { useLowkey } from "@/lib/lowkey/store";
 import { adminDeleteAccount } from "@/lib/lowkey/admin.functions";
+import { triggerTagClusteringFn } from "@/lib/lowkey/ai.functions";
 import type { AgeBand } from "@/lib/lowkey/types";
 
 export const Route = createFileRoute("/app/admin")({
@@ -46,6 +47,8 @@ function AdminPage() {
     deleteSuperPost,
   } = useLowkey();
   const navigate = useNavigate();
+  const runClustering = useServerFn(triggerTagClusteringFn);
+  const [clusteringBusy, setClusteringBusy] = useState(false);
   const [tab, setTab] = useState<Tab>("overview");
   const [reports, setReports] = useState<Report[]>([]);
   const [q, setQ] = useState("");
@@ -252,6 +255,36 @@ function AdminPage() {
 
       {tab === "overview" && (
         <div className="grid grid-cols-2 gap-3 p-4">
+          <div className="col-span-2 flex items-center justify-between gap-3 rounded-3xl border border-border bg-card p-4">
+            <div>
+              <p className="lowkey text-sm font-bold">local tag hubs</p>
+              <p className="lowkey text-xs text-muted-foreground">
+                runs daily automatically — or trigger a fresh cluster now
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={clusteringBusy}
+              onClick={async () => {
+                setClusteringBusy(true);
+                try {
+                  const res = await runClustering();
+                  if (res.ok) {
+                    toast.success(`updated ${res.hubsCreated ?? 0} local tag hubs`);
+                  } else {
+                    toast.error(res.error ?? res.skipped ?? "could not cluster tags");
+                  }
+                } catch {
+                  toast.error("could not run tag clustering");
+                } finally {
+                  setClusteringBusy(false);
+                }
+              }}
+              className="lk-btn-primary lowkey shrink-0 px-3.5 py-2 text-xs disabled:opacity-50"
+            >
+              {clusteringBusy ? "clustering..." : "cluster now"}
+            </button>
+          </div>
           {[
             ["under 18 users", stats.under],
             ["18+ users", stats.adult],

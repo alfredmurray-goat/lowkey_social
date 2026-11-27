@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_job_state: {
+        Row: {
+          job_name: string
+          last_result: Json | null
+          last_run_at: string | null
+          locked_until: string | null
+          pause_reason: string | null
+          paused: boolean
+        }
+        Insert: {
+          job_name: string
+          last_result?: Json | null
+          last_run_at?: string | null
+          locked_until?: string | null
+          pause_reason?: string | null
+          paused?: boolean
+        }
+        Update: {
+          job_name?: string
+          last_result?: Json | null
+          last_run_at?: string | null
+          locked_until?: string | null
+          pause_reason?: string | null
+          paused?: boolean
+        }
+        Relationships: []
+      }
+      ai_usage_daily: {
+        Row: {
+          count: number
+          day: string
+          feature: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          day?: string
+          feature: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          day?: string
+          feature?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       blocks: {
         Row: {
           blocked_id: string
@@ -817,6 +865,7 @@ export type Database = {
       profiles: {
         Row: {
           age_band: Database["public"]["Enums"]["age_band"] | null
+          ai_settings: Json
           allow_comments: string
           allow_community_invites: string
           allow_dms: string
@@ -871,6 +920,7 @@ export type Database = {
         }
         Insert: {
           age_band?: Database["public"]["Enums"]["age_band"] | null
+          ai_settings?: Json
           allow_comments?: string
           allow_community_invites?: string
           allow_dms?: string
@@ -925,6 +975,7 @@ export type Database = {
         }
         Update: {
           age_band?: Database["public"]["Enums"]["age_band"] | null
+          ai_settings?: Json
           allow_comments?: string
           allow_community_invites?: string
           allow_dms?: string
@@ -1057,6 +1108,53 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tag_hub_members: {
+        Row: {
+          hub_id: string
+          tag: string
+        }
+        Insert: {
+          hub_id: string
+          tag: string
+        }
+        Update: {
+          hub_id?: string
+          tag?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tag_hub_members_hub_id_fkey"
+            columns: ["hub_id"]
+            isOneToOne: false
+            referencedRelation: "tag_hubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tag_hubs: {
+        Row: {
+          age_band: Database["public"]["Enums"]["age_band"]
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          age_band: Database["public"]["Enums"]["age_band"]
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          age_band?: Database["public"]["Enums"]["age_band"]
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

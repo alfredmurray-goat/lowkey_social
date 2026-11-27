@@ -134,6 +134,13 @@
       "when": 1795760386429,
       "tag": "0018_community_posts_members_only_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795788367528,
+      "tag": "0019_ai_features_and_tag_hubs",
+      "breakpoints": true
     }
   ]
 }

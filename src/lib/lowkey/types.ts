@@ -1,3 +1,5 @@
+import type { AiSettings } from "./ai-settings";
+
 export type AgeBand = "under_18" | "adult";
 
 export type VerificationStatus = "unverified" | "pending" | "verified";
@@ -63,6 +65,7 @@ textScale: TextScale;
   allowCommunityInvites: Audience;
   showCity: "band" | "followers" | "nobody";
   language: "en" | "da";
+  aiSettings: AiSettings;
 }
 
 export type Audience = "everyone" | "followers" | "nobody";

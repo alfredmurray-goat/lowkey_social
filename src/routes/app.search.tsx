@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Hash } from "lucide-react";
+import { Hash, Sparkles } from "lucide-react";
 import { AppScreen, Avatar } from "@/components/lowkey/shell";
+import { isAiFeatureEnabled } from "@/lib/lowkey/ai-settings";
 import { useBandPosts, useBandProfiles, useLowkey } from "@/lib/lowkey/store";
+import { useTagHubs } from "@/lib/lowkey/tag-hubs";
 
 export const Route = createFileRoute("/app/search")({
   head: () => ({
@@ -26,6 +28,10 @@ function SearchPage() {
   const posts = useBandPosts();
   const { me, toggleFollow, state } = useLowkey();
   const term = q.trim().toLowerCase().replace(/^#/, "");
+  const hubs = useTagHubs(isAiFeatureEnabled(me?.aiSettings, "hubs"));
+  const matchingHubs = hubs.filter(
+    (h) => !term || h.name.includes(term) || h.tags.some((t) => t.includes(term)),
+  );
 
   // Trending hashtags in your age band
   const tagCounts = new Map<string, number>();
@@ -48,6 +54,23 @@ function SearchPage() {
 
   return (
     <AppScreen title="search">
+      {matchingHubs.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-border px-4 py-2.5">
+          <span className="lowkey inline-flex shrink-0 items-center gap-1 text-xs font-bold text-muted-foreground">
+            <Sparkles className="size-3.5 text-primary" /> local hubs
+          </span>
+          {matchingHubs.map((h) => (
+            <Link
+              key={h.id}
+              to="/app/tag/$tag"
+              params={{ tag: h.name }}
+              className="lowkey shrink-0 rounded-full bg-primary-soft px-3 py-1.5 text-xs font-bold text-foreground hover:bg-primary hover:text-primary-foreground"
+            >
+              {h.name} ({h.tags.length})
+            </Link>
+          ))}
+        </div>
+      )}
       <div className="px-4 py-4">
         <input
           value={q}

@@ -1,3 +1,4 @@
+import { normalizeAiSettings, type AiSettings } from "./ai-settings";
 import {
   createContext,
   useCallback,
@@ -86,6 +87,7 @@ theme?: ThemePref;
   allowCommunityInvites?: Audience;
   showCity?: "band" | "followers" | "nobody";
   language?: "en" | "da";
+  aiSettings?: AiSettings;
 }
 
 export interface ImportProgress {
@@ -272,6 +274,7 @@ textScale: (r['text_scale'] as TextScale) ?? "normal",
     allowCommunityInvites: (r['allow_community_invites'] as Audience) ?? "everyone",
     showCity: (r['show_city'] as "band" | "followers" | "nobody") ?? "band",
     language: (r['language'] as "en" | "da") ?? "en",
+    aiSettings: normalizeAiSettings(r['ai_settings']),
   };
 }
 
@@ -651,6 +654,7 @@ return {
         ...(prefs.allowCommunityInvites ? { allow_community_invites: prefs.allowCommunityInvites } : {}),
         ...(prefs.showCity ? { show_city: prefs.showCity } : {}),
         ...(prefs.language ? { language: prefs.language } : {}),
+        ...(prefs.aiSettings ? { ai_settings: prefs.aiSettings as unknown as Record<string, boolean> } : {}),
       };
       const { error } = await supabase.from("profiles").update(patch).eq("id", id);
       if (error) return { ok: false, error: error.message.toLowerCase() };

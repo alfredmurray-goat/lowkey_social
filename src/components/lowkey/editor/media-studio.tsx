@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useLowkey } from "@/lib/lowkey/store";
 import { INTERESTS } from "@/lib/lowkey/types";
+import { isAiFeatureEnabled } from "@/lib/lowkey/ai-settings";
+import { analyzeAudioUrl, snapToNearestBeat, type BeatAnalysis } from "@/lib/lowkey/beat";
+import { AiCaptionWand } from "../ai-caption-wand";
 import { defaultAdjustments, type MediaAdjustments, type StudioClip, type StudioSong } from "@/lib/lowkey/editor/types";
 import { renderPhoto, renderVideo } from "@/lib/lowkey/editor/render";
 import { ScribbleLoader } from "@/components/lowkey/scribble-loader";
@@ -62,8 +65,28 @@ export function MediaStudio() {
   const [renderProgress, setRenderProgress] = useState(0);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [posting, setPosting] = useState(false);
+  const [beatInfo, setBeatInfo] = useState<BeatAnalysis | null>(null);
+  const [beatBusy, setBeatBusy] = useState(false);
+  const [snapBeats, setSnapBeats] = useState(false);
   const clip = clips[active];
   const kind = clips.some((c) => c.kind === "video") ? "video" : "post";
+  const aiCaptionsOn = isAiFeatureEnabled(me?.aiSettings, "captions");
+  const aiBeatSyncOn = isAiFeatureEnabled(me?.aiSettings, "beatSync");
+
+  const runBeatDetect = async () => {
+    if (!song?.url) return;
+    setBeatBusy(true);
+    try {
+      const info = await analyzeAudioUrl(song.url);
+      setBeatInfo(info);
+      setSnapBeats(true);
+      toast.success(`found ${info.beats.length} beats (${info.bpm} bpm · drop at ${info.dropSec}s)`);
+    } catch {
+      toast.error("could not analyze that audio track");
+    } finally {
+      setBeatBusy(false);
+    }
+  };
 
   const loadDrafts = async () => {
     if (!me) return;
@@ -386,7 +409,19 @@ export function MediaStudio() {
               />
             </label>
             <label className="block">
-              <span className="lowkey text-xs font-bold text-muted-foreground">caption &amp; #hashtags</span>
+              {aiCaptionsOn ? (
+                <AiCaptionWand
+                  mediaUrl={clip?.url ?? null}
+                  mediaKind={clip?.kind ?? null}
+                  currentCaption={caption}
+                  onPickCaption={(text) => setCaption(text)}
+                  onAddTag={(tg) =>
+                    setCaption((c) => (c.includes(`#${tg}`) ? c : `${c.trim()} #${tg}`.trim()))
+                  }
+                />
+              ) : (
+                <span className="lowkey text-xs font-bold text-muted-foreground">caption &amp; #hashtags</span>
+              )}
               <textarea
                 value={caption}
                 maxLength={280}
@@ -522,8 +557,67 @@ export function MediaStudio() {
               </div>
               {clip?.kind === "video" && (
                 <>
-                  <Range label="starts" value={clip.trimStart} min={0} max={Math.max(0.1, clip.trimEnd - 0.1)} step={0.1} onChange={(v) => setClips((all) => all.map((c, i) => (i === active ? { ...c, trimStart: v } : c)))} />
-                  <Range label="ends" value={clip.trimEnd} min={Math.min(clip.duration, clip.trimStart + 0.1)} max={clip.duration} step={0.1} onChange={(v) => setClips((all) => all.map((c, i) => (i === active ? { ...c, trimEnd: v } : c)))} />
+                  {beatInfo && beatInfo.beats.length > 0 && aiBeatSyncOn && (
+                    <div className="mb-2 rounded-2xl border border-border bg-primary-soft/50 p-2.5 space-y-2">
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <span className="lowkey font-bold">
+                          {beatInfo.bpm} bpm · drop at {beatInfo.dropSec}s
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const start = Math.min(beatInfo.dropSec, Math.max(0, clip.duration - 0.5));
+                            setClips((all) =>
+                              all.map((c, i) =>
+                                i === active
+                                  ? { ...c, trimStart: Number(start.toFixed(2)), trimEnd: Math.max(c.trimEnd, Math.min(c.duration, start + 0.5)) }
+                                  : c,
+                              ),
+                            );
+                            toast.success("clip starts on the drop");
+                          }}
+                          className="lowkey rounded-full bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground"
+                        >
+                          start on drop
+                        </button>
+                      </div>
+                      <div className="relative h-4 w-full overflow-hidden rounded-full bg-background/80">
+                        {beatInfo.beats.slice(0, 60).map((b, idx) => {
+                          const pct = Math.min(100, (b / Math.max(0.1, clip.duration)) * 100);
+                          const isDrop = Math.abs(b - beatInfo.dropSec) < 0.05;
+                          return (
+                            <span
+                              key={idx}
+                              style={{ left: `${pct}%` }}
+                              className={`absolute top-0 bottom-0 ${isDrop ? "w-1 bg-foreground" : "w-0.5 bg-primary"}`}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  <Range
+                    label="starts"
+                    value={clip.trimStart}
+                    min={0}
+                    max={Math.max(0.1, clip.trimEnd - 0.1)}
+                    step={0.1}
+                    onChange={(v) => {
+                      const snapped = snapBeats && beatInfo ? snapToNearestBeat(v, beatInfo.beats) : v;
+                      setClips((all) => all.map((c, i) => (i === active ? { ...c, trimStart: Math.min(snapped, c.trimEnd - 0.1) } : c)));
+                    }}
+                  />
+                  <Range
+                    label="ends"
+                    value={clip.trimEnd}
+                    min={Math.min(clip.duration, clip.trimStart + 0.1)}
+                    max={clip.duration}
+                    step={0.1}
+                    onChange={(v) => {
+                      const snapped = snapBeats && beatInfo ? snapToNearestBeat(v, beatInfo.beats) : v;
+                      setClips((all) => all.map((c, i) => (i === active ? { ...c, trimEnd: Math.max(snapped, c.trimStart + 0.1) } : c)));
+                    }}
+                  />
                   <Range label="speed" value={adjustments.speed} min={0.5} max={2} step={0.25} onChange={(v) => updateAdjustment("speed", v)} />
                   <Range label="original vol" value={adjustments.originalVolume} min={0} max={100} onChange={(v) => updateAdjustment("originalVolume", v)} />
                 </>
@@ -549,6 +643,24 @@ export function MediaStudio() {
                 <>
                   <p className="lowkey rounded-2xl bg-primary-soft p-2.5 text-sm">song playing is: <strong>{song.title} — {song.artist}</strong></p>
                   <audio src={song.url} controls loop className="mt-2 w-full" />
+                  {aiBeatSyncOn && song.url && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="rounded-2xl text-xs"
+                        disabled={beatBusy}
+                        onClick={() => void runBeatDetect()}
+                      >
+                        {beatBusy ? "finding beats..." : beatInfo ? `re-detect (${beatInfo.bpm} bpm)` : "snap to beat"}
+                      </Button>
+                      {beatInfo && (
+                        <span className="lowkey text-xs text-muted-foreground">
+                          drop at {beatInfo.dropSec}s · trim snaps to beats
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <Range label="song vol" value={adjustments.songVolume} min={0} max={100} onChange={(v) => updateAdjustment("songVolume", v)} />
                   {!song.catalog && (
                     <label className="flex min-h-11 items-center gap-3 text-sm">

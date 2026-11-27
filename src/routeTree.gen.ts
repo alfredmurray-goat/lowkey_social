@@ -41,6 +41,7 @@ import { Route as AppCommunityIdRouteImport } from './routes/app.community.$id'
 import { Route as AppJoinTokenRouteImport } from './routes/app.join.$token'
 import { Route as AppTagTagRouteImport } from './routes/app.tag.$tag'
 import { Route as AppUHandleRouteImport } from './routes/app.u.$handle'
+import { Route as ApiPublicJobsClusterTagsRouteImport } from './routes/api/public/jobs/cluster-tags'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -205,6 +206,12 @@ const AppUHandleRoute = AppUHandleRouteImport.update({
   path: '/app/u/$handle',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicJobsClusterTagsRoute =
+  ApiPublicJobsClusterTagsRouteImport.update({
+    id: '/api/public/jobs/cluster-tags',
+    path: '/api/public/jobs/cluster-tags',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   id: '/lovable/email/auth/preview',
   path: '/lovable/email/auth/preview',
@@ -255,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/app/join/$token': typeof AppJoinTokenRoute
   '/app/tag/$tag': typeof AppTagTagRoute
   '/app/u/$handle': typeof AppUHandleRoute
+  '/api/public/jobs/cluster-tags': typeof ApiPublicJobsClusterTagsRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -292,6 +300,7 @@ export interface FileRoutesByTo {
   '/app/join/$token': typeof AppJoinTokenRoute
   '/app/tag/$tag': typeof AppTagTagRoute
   '/app/u/$handle': typeof AppUHandleRoute
+  '/api/public/jobs/cluster-tags': typeof ApiPublicJobsClusterTagsRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -330,6 +339,7 @@ export interface FileRoutesById {
   '/app/join/$token': typeof AppJoinTokenRoute
   '/app/tag/$tag': typeof AppTagTagRoute
   '/app/u/$handle': typeof AppUHandleRoute
+  '/api/public/jobs/cluster-tags': typeof ApiPublicJobsClusterTagsRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -369,6 +379,7 @@ export interface FileRouteTypes {
     | '/app/join/$token'
     | '/app/tag/$tag'
     | '/app/u/$handle'
+    | '/api/public/jobs/cluster-tags'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -406,6 +417,7 @@ export interface FileRouteTypes {
     | '/app/join/$token'
     | '/app/tag/$tag'
     | '/app/u/$handle'
+    | '/api/public/jobs/cluster-tags'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -443,6 +455,7 @@ export interface FileRouteTypes {
     | '/app/join/$token'
     | '/app/tag/$tag'
     | '/app/u/$handle'
+    | '/api/public/jobs/cluster-tags'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -481,6 +494,7 @@ export interface RootRouteChildren {
   AppJoinTokenRoute: typeof AppJoinTokenRoute
   AppTagTagRoute: typeof AppTagTagRoute
   AppUHandleRoute: typeof AppUHandleRoute
+  ApiPublicJobsClusterTagsRoute: typeof ApiPublicJobsClusterTagsRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
@@ -712,6 +726,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppUHandleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/cluster-tags': {
+      id: '/api/public/jobs/cluster-tags'
+      path: '/api/public/jobs/cluster-tags'
+      fullPath: '/api/public/jobs/cluster-tags'
+      preLoaderRoute: typeof ApiPublicJobsClusterTagsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/auth/preview': {
       id: '/lovable/email/auth/preview'
       path: '/lovable/email/auth/preview'
@@ -769,6 +790,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppJoinTokenRoute: AppJoinTokenRoute,
   AppTagTagRoute: AppTagTagRoute,
   AppUHandleRoute: AppUHandleRoute,
+  ApiPublicJobsClusterTagsRoute: ApiPublicJobsClusterTagsRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,

@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Settings, Camera, Bookmark, Pencil } from "lucide-react";
+import { Settings, Camera, Bookmark, Pencil, Sparkles } from "lucide-react";
 import { useRef, useState } from "react";
+import { DoodleAvatarModal } from "@/components/lowkey/doodle-avatar-modal";
+import { isAiFeatureEnabled } from "@/lib/lowkey/ai-settings";
 import { AppScreen, Avatar, Poster, bandLabel } from "@/components/lowkey/shell";
 import { toast } from "sonner";
 import { useLowkey, useTodayUsage } from "@/lib/lowkey/store";
@@ -28,6 +30,7 @@ const { state, me, uploadAvatar, updateProfile } = useLowkey();
   const [uploading, setUploading] = useState(false);
   const [editingStatus, setEditingStatus] = useState(false);
   const [statusDraft, setStatusDraft] = useState("");
+  const [doodleOpen, setDoodleOpen] = useState(false);
 
   const pickAvatar = async (file: File | undefined) => {
     if (!file) return;
@@ -81,11 +84,30 @@ const { state, me, uploadAvatar, updateProfile } = useLowkey();
               <Camera className="size-4" />
             </span>
           </button>
-          <Link to="/app/settings" className="lowkey mb-1 rounded-full border border-border bg-background px-4 py-2 text-xs font-bold">
-            edit profile
-          </Link>
+          <div className="mb-1 flex items-center gap-2">
+            {isAiFeatureEnabled(me.aiSettings, "doodle") && (
+              <button
+                type="button"
+                onClick={() => setDoodleOpen(true)}
+                className="lowkey inline-flex items-center gap-1 rounded-full bg-primary-soft px-3 py-2 text-xs font-bold text-foreground transition hover:bg-primary/40"
+              >
+                <Sparkles className="size-3.5" /> doodle me
+              </button>
+            )}
+            <Link to="/app/settings" className="lowkey rounded-full border border-border bg-background px-4 py-2 text-xs font-bold">
+              edit profile
+            </Link>
+          </div>
         </div>
         <input ref={fileRef} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={(e) => void pickAvatar(e.target.files?.[0])} />
+        {doodleOpen && (
+          <DoodleAvatarModal
+            onClose={() => setDoodleOpen(false)}
+            onSaveAvatar={async (file) => {
+              await pickAvatar(file);
+            }}
+          />
+        )}
         {uploading && <p className="lowkey mt-2 text-xs text-muted-foreground">uploading your picture...</p>}
 
         <h1 className="lowkey mt-3 font-display text-2xl font-bold">{me.displayName}</h1>

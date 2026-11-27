@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { AppScreen, Avatar, StreakPill } from "@/components/lowkey/shell";
+import { ChatTldrBar } from "@/components/lowkey/chat-tldr-bar";
+import { isAiFeatureEnabled } from "@/lib/lowkey/ai-settings";
 import { useLowkey } from "@/lib/lowkey/store";
 
 export const Route = createFileRoute("/app/chat/$id")({
@@ -54,6 +56,9 @@ function ThreadPage() {
 
   const conversation = state.conversations.find((c) => c.id === id);
   const allowed = !!conversation && !!me && conversation.memberIds.includes(me.id);
+  const [initialUnread] = useState(
+    () => state.messages.filter((m) => m.conversationId === id && m.authorId !== me?.id).length,
+  );
 
   useEffect(() => {
     if (me && !allowed) void navigate({ to: "/app/chats", replace: true });
@@ -127,6 +132,9 @@ function ThreadPage() {
             )}
           </div>
         </header>
+        {isGroup && isAiFeatureEnabled(me.aiSettings, "tldr") && (
+          <ChatTldrBar conversationId={id} unreadCount={initialUnread} />
+        )}
 
         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3">
           {messages.length === 0 ? (

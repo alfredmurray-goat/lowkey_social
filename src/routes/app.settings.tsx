@@ -14,6 +14,7 @@ import {
   Ban,
   Loader2,
   Eye,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppScreen, bandLabel, BetaTag, FeedbackLink } from "@/components/lowkey/shell";
@@ -194,6 +195,10 @@ function SettingsPage() {
   const save = async (patch: Parameters<typeof updateProfile>[0], msg = "saved") => {
     const res = await updateProfile(patch);
     toast[res.ok ? "success" : "error"](res.ok ? msg : (res.error ?? "couldn't save that"));
+  };
+
+  const saveAi = (patch: Partial<typeof me.aiSettings>, msg = "ai settings updated") => {
+    void save({ aiSettings: { ...me.aiSettings, ...patch } }, msg);
   };
 
   const toggleInterest = (tag: string) => {
@@ -644,6 +649,55 @@ function SettingsPage() {
         </Section>
 
         {/* privacy & safety */}
+        <Section icon={<Sparkles className="size-4 text-primary" />} title="ai features">
+          <p className="lowkey text-xs text-muted-foreground">
+            nothing you send to ai is saved or used for training. turn off everything or pick what
+            you want.
+          </p>
+          <Toggle
+            label="turn off all ai"
+            hint="hides every ai button across the app"
+            value={!me.aiSettings.enabled}
+            onChange={(off) =>
+              saveAi({ enabled: !off }, off ? "all ai features turned off" : "ai features turned on")
+            }
+          />
+          {me.aiSettings.enabled && (
+            <div className="flex flex-col gap-3 border-t border-border pt-3">
+              <Toggle
+                label="caption & tag helper"
+                hint="magic wand on the create screen for lowercase captions and local tags"
+                value={me.aiSettings.captions}
+                onChange={(v) => saveAi({ captions: v })}
+              />
+              <Toggle
+                label="doodle me avatar"
+                hint="turn a selfie into a drawn profile picture without saving the photo"
+                value={me.aiSettings.doodle}
+                onChange={(v) => saveAi({ doodle: v })}
+              />
+              <Toggle
+                label="chat tldr"
+                hint="3-bullet catch-up when a group chat has 20+ unread messages"
+                value={me.aiSettings.tldr}
+                onChange={(v) => saveAi({ tldr: v })}
+              />
+              <Toggle
+                label="local tag hubs"
+                hint="group related local hashtags like #cph and #københavn into one hub"
+                value={me.aiSettings.hubs}
+                onChange={(v) => saveAi({ hubs: v })}
+              />
+              <Toggle
+                label="beat-sync assistant"
+                hint="snap video cuts to the song's beat right on your device"
+                value={me.aiSettings.beatSync}
+                onChange={(v) => saveAi({ beatSync: v })}
+              />
+            </div>
+          )}
+        </Section>
+
         <Section icon={<Lock className="size-4 text-primary" />} title="privacy & safety">
           <Toggle
             label="private account"
