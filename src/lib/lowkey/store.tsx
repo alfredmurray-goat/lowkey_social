@@ -1812,12 +1812,14 @@ export function useBandPosts(kind?: PostKind) {
     return rankFeedPosts({
       posts: filtered,
       hashtags: state.hashtags,
+      likes: state.likes,
+      comments: state.comments,
       interests: me.interests ?? [],
       followingIds,
       affinity: readTagAffinity(),
       seed: SESSION_FEED_SEED,
     });
-  }, [state.posts, state.hashtags, state.follows, me, kind]);
+  }, [state.posts, state.hashtags, state.likes, state.comments, state.follows, me, kind]);
 }
 
 export function useMyConversations() {

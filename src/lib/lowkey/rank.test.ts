@@ -21,6 +21,17 @@ function makePost(id: string, authorId: string, caption: string, hoursAgo = 2): 
   };
 }
 
+const emptyRanking = {
+  hashtags: [] as PostHashtag[],
+  likes: [] as { postId: string }[],
+  comments: [] as { postId: string }[],
+  interests: [] as string[],
+  followingIds: new Set<string>(),
+  affinity: {},
+  seed: 42,
+  now: NOW,
+};
+
 describe("rankFeedPosts", () => {
   const posts: Post[] = [
     makePost("p1", "u1", "skate park #skating"),
@@ -33,28 +44,62 @@ describe("rankFeedPosts", () => {
   const hashtags: PostHashtag[] = [];
 
   it("keeps the same order for the same session seed", () => {
-    const a = rankFeedPosts({ posts, hashtags, interests: [], followingIds: new Set(), affinity: {}, seed: 42, now: NOW });
-    const b = rankFeedPosts({ posts, hashtags, interests: [], followingIds: new Set(), affinity: {}, seed: 42, now: NOW });
+    const a = rankFeedPosts({ ...emptyRanking, posts, hashtags });
+    const b = rankFeedPosts({ ...emptyRanking, posts, hashtags });
     expect(a.map((p) => p.id)).toEqual(b.map((p) => p.id));
   });
 
   it("reshuffles when the session seed changes", () => {
-    const a = rankFeedPosts({ posts, hashtags, interests: [], followingIds: new Set(), affinity: {}, seed: 101, now: NOW });
-    const b = rankFeedPosts({ posts, hashtags, interests: [], followingIds: new Set(), affinity: {}, seed: 9999, now: NOW });
+    const a = rankFeedPosts({ ...emptyRanking, posts, hashtags, seed: 101 });
+    const b = rankFeedPosts({ ...emptyRanking, posts, hashtags, seed: 9999 });
     expect(a.map((p) => p.id)).not.toEqual(b.map((p) => p.id));
   });
 
   it("ranks posts with liked hashtags higher", () => {
     const ranked = rankFeedPosts({
+      ...emptyRanking,
       posts,
       hashtags,
-      interests: [],
-      followingIds: new Set(),
       affinity: { gaming: { score: 8, updatedAt: NOW } },
       seed: 7,
-      now: NOW,
     });
     expect(ranked[0]?.id).toBe("p3");
+  });
+
+  it("ranks a newer post above an older post when engagement is equal", () => {
+    const ranked = rankFeedPosts({
+      ...emptyRanking,
+      posts: [
+        makePost("old", "old-author", "last month", 24 * 30),
+        makePost("new", "new-author", "right now", 0),
+      ],
+    });
+    expect(ranked.map((p) => p.id)).toEqual(["new", "old"]);
+  });
+
+  it("ranks a post with likes above an otherwise identical post without likes", () => {
+    const ranked = rankFeedPosts({
+      ...emptyRanking,
+      posts: [
+        makePost("quiet", "quiet-author", "quiet", 2),
+        makePost("liked", "liked-author", "liked", 2),
+      ],
+      likes: Array.from({ length: 100 }, () => ({ postId: "liked" })),
+    });
+    expect(ranked.map((p) => p.id)).toEqual(["liked", "quiet"]);
+  });
+
+  it("weighs comments more than the same number of likes", () => {
+    const ranked = rankFeedPosts({
+      ...emptyRanking,
+      posts: [
+        makePost("liked", "liked-author", "liked", 2),
+        makePost("discussed", "discussed-author", "discussed", 2),
+      ],
+      likes: Array.from({ length: 100 }, () => ({ postId: "liked" })),
+      comments: Array.from({ length: 100 }, () => ({ postId: "discussed" })),
+    });
+    expect(ranked.map((p) => p.id)).toEqual(["discussed", "liked"]);
   });
 
   it("caps consecutive posts from the same author or same tag at 2", () => {
@@ -66,13 +111,13 @@ describe("rankFeedPosts", () => {
       makePost("b1", "other", "break #music", 3),
     ];
     const ranked = rankFeedPosts({
+      ...emptyRanking,
       posts: burst,
       hashtags,
       interests: ["skating"],
       followingIds: new Set(["same"]),
       affinity: { skating: { score: 10, updatedAt: NOW } },
       seed: 1,
-      now: NOW,
     });
     const ids = ranked.map((p) => p.authorId);
     // The 3rd item must not be "same" because "other" is available

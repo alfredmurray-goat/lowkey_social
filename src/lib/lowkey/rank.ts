@@ -91,6 +91,8 @@ function seededUnit(id: string, seed: number): number {
 export interface RankInput {
   posts: Post[];
   hashtags: PostHashtag[];
+  likes: ReadonlyArray<{ postId: string }>;
+  comments: ReadonlyArray<{ postId: string }>;
   interests: string[];
   followingIds: Set<string>;
   affinity: TagAffinityMap;
@@ -123,14 +125,20 @@ export function getTrendingTags(posts: Post[], hashtags: PostHashtag[], now = Da
  * - trending tags in the band
  * - onboarding interests (matching topic or hashtag)
  * - people you follow
- * - recency
+ * - recency (newer posts score higher)
+ * - engagement (likes count, comments count twice as much)
  * - seeded per-session shuffle jitter
  * Followed by a diversity pass so at most 2 posts in a row share an author or primary tag.
  */
 export function rankFeedPosts(input: RankInput): Post[] {
-  const { posts, hashtags, interests, followingIds, affinity, seed } = input;
+  const { posts, hashtags, likes, comments, interests, followingIds, affinity, seed } = input;
   const now = input.now ?? Date.now();
   if (posts.length <= 1) return [...posts];
+
+  const likeCounts = new Map<string, number>();
+  const commentCounts = new Map<string, number>();
+  for (const like of likes) likeCounts.set(like.postId, (likeCounts.get(like.postId) ?? 0) + 1);
+  for (const comment of comments) commentCounts.set(comment.postId, (commentCounts.get(comment.postId) ?? 0) + 1);
 
   const interestSet = new Set(interests.map((i) => i.toLowerCase().trim()).filter(Boolean));
   const trendingList = getTrendingTags(posts, hashtags, now, 12);
@@ -157,8 +165,14 @@ export function rankFeedPosts(input: RankInput): Post[] {
     const interestBoost = (topicHit ? 2.2 : 0) + (interestTagHit ? 2.8 : 0);
     const followBoost = followingIds.has(post.authorId) ? 2.5 : 0;
 
-    const ageHours = Math.max(0, (now - new Date(post.createdAt).getTime()) / 3_600_000);
-    const recency = 4.0 / (1 + ageHours / 18);
+    const createdAt = new Date(post.createdAt).getTime();
+    const ageHours = Number.isFinite(createdAt) ? Math.max(0, (now - createdAt) / 3_600_000) : Infinity;
+    const recency = 6 / (1 + ageHours / 12);
+
+    // Log scaling lets engagement matter without allowing viral posts to dominate forever.
+    // A comment deliberately contributes twice as much as a like at the same count.
+    const likeBoost = Math.log1p(likeCounts.get(post.id) ?? 0) * 0.9;
+    const commentBoost = Math.log1p(commentCounts.get(post.id) ?? 0) * 1.8;
 
     // Jitter is strong enough to reshuffle similar posts every app open
     const jitter = seededUnit(post.id, seed) * 3.5;
@@ -169,6 +183,8 @@ export function rankFeedPosts(input: RankInput): Post[] {
       interestBoost +
       followBoost +
       recency +
+      likeBoost +
+      commentBoost +
       jitter;
 
     return { post, score, primaryTag: tags[0] ?? null };
