@@ -85,6 +85,8 @@ export interface Post {
   caption: string;
   posterHue: number;
   mediaUrl: string | null;
+  /** Ordered, signed photo attachments; older posts use mediaUrl. */
+  mediaUrls?: string[];
   audioUrl?: string | null;
   songTitle?: string | null;
   songArtist?: string | null;

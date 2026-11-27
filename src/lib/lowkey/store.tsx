@@ -122,6 +122,7 @@ createPost: (input: {
     title?: string | null;
     caption: string;
     mediaUrl: string | null;
+    mediaPaths?: string[];
     topic?: string | null;
     communityId?: string | null;
     songTitle?: string | null;
@@ -345,7 +346,7 @@ if (!mineRow) {
       superPostsRes,
     ] = await Promise.all([
       supabase.from("profiles").select("*"),
-      supabase.from("posts").select("*").order("created_at", { ascending: false }),
+      supabase.from("posts").select("*, post_media(storage_path, sort_order, media_kind)").order("created_at", { ascending: false }),
       supabase.from("post_comments").select("*"),
       supabase.from("post_likes").select("*"),
       supabase.from("follows").select("*"),
@@ -386,7 +387,7 @@ const profileRows = (profilesRes.data ?? []) as Row[];
       ),
       signPaths(
         "media",
-        postRows.map((r) => (r['media_url'] as string | null) ?? null),
+        postRows.flatMap((r) => [(r['media_url'] as string | null) ?? null, ...((r['post_media'] as Row[] | null) ?? []).map((m) => m['storage_path'] as string)]),
       ),
       signPaths(
         "media",
@@ -434,6 +435,13 @@ posts: postRows.map((r) => ({
         caption: (r['caption'] as string) ?? "",
         posterHue: (r['poster_hue'] as number) ?? 60,
         mediaUrl: resolve(mediaUrls, (r['media_url'] as string | null) ?? null),
+        mediaUrls: Array.from(new Set([
+          resolve(mediaUrls, (r['media_url'] as string | null) ?? null),
+          ...((r['post_media'] as Row[] | null) ?? [])
+            .filter((m) => m['media_kind'] === 'image')
+            .sort((a, b) => Number(a['sort_order']) - Number(b['sort_order']))
+            .map((m) => resolve(mediaUrls, m['storage_path'] as string)),
+        ].filter((url): url is string => Boolean(url)))),
         audioUrl: resolve(audioUrls, (r['audio_path'] as string | null) ?? null),
         songTitle: (r['song_title'] as string | null) ?? null,
         songArtist: (r['song_artist'] as string | null) ?? null,
@@ -767,6 +775,7 @@ async (input: {
       title?: string | null;
       caption: string;
       mediaUrl: string | null;
+      mediaPaths?: string[];
       topic?: string | null;
       communityId?: string | null;
       songTitle?: string | null;
@@ -797,6 +806,16 @@ title: input.title?.trim() ? input.title.trim().toLowerCase() : null,
         .select("id")
         .maybeSingle();
       if (error || !data) return null;
+      if (input.kind === "post" && input.mediaPaths && input.mediaPaths.length > 1) {
+        const { error: attachmentError } = await supabase.from("post_media").insert(
+          input.mediaPaths.map((path, index) => ({ post_id: data.id, storage_path: path, media_kind: "image", sort_order: index })),
+        );
+        if (attachmentError) {
+          await supabase.from("posts").delete().eq("id", data.id);
+          toast.error("couldn't save all photos — please try again");
+          return null;
+        }
+      }
       await refresh();
       return (data as Row)['id'] as string;
     },

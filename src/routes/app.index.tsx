@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Flag, Heart, MessageSquare, MoreHorizontal, Pencil, Send, Bookmark, Trash2, X, Music2, Maximize2, Megaphone, Plus, QrCode } from "lucide-react";
+import { Flag, Heart, MessageSquare, MoreHorizontal, Pencil, Send, Bookmark, Trash2, X, Music2, Megaphone, Plus, QrCode } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AppScreen, Avatar, Poster } from "@/components/lowkey/shell";
 import { CommentsSheet } from "@/components/lowkey/comments";
 import { CaptionText } from "@/components/lowkey/caption-text";
@@ -8,6 +9,7 @@ import { useBandPosts, useBandProfiles, useLowkey } from "@/lib/lowkey/store";
 import { sameCity } from "@/lib/lowkey/city";
 import type { Post } from "@/lib/lowkey/types";
 import { Button } from "@/components/ui/button";
+import { PhotoCarousel } from "@/components/lowkey/photo-carousel";
 
 const REPORT_REASONS = ["spam", "harassment", "nsfw", "underage", "hateful", "other"];
 
@@ -117,6 +119,7 @@ function FeedCard({ post }: { post: Post }) {
   const [editTitle, setEditTitle] = useState(post.title ?? "");
   const [editCaption, setEditCaption] = useState(post.caption);
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
 
   if (!author) return null;
 
@@ -276,17 +279,7 @@ function FeedCard({ post }: { post: Post }) {
             )}
             {post.mediaUrl ? (
               <>
-                <button
-                  type="button"
-                  onClick={() => setPhotoOpen(true)}
-                  className="group relative block w-full overflow-hidden rounded-2xl"
-                  aria-label="open photo full screen"
-                >
-                  <Poster hue={post.posterHue} caption={post.caption} mediaUrl={post.mediaUrl} />
-                  <span className="absolute right-3 bottom-3 flex size-9 items-center justify-center rounded-full bg-background/85 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-                    <Maximize2 className="size-4" />
-                  </span>
-                </button>
+                <PhotoCarousel urls={post.mediaUrls?.length ? post.mediaUrls : [post.mediaUrl]} caption={post.caption} onOpen={(index) => { setPhotoIndex(index); setPhotoOpen(true); }} />
                 {post.songTitle && (
                   <div className="lowkey mt-2 flex items-center gap-2 rounded-lg bg-primary-soft px-3 py-2 text-xs">
                     <Music2 className="size-3.5 shrink-0" />
@@ -340,6 +333,7 @@ function FeedCard({ post }: { post: Post }) {
       {photoOpen && post.mediaUrl && (
         <FullscreenPhoto
           post={post}
+          initialIndex={photoIndex}
           authorHandle={author.handle}
           liked={liked}
           saved={saved}
@@ -354,7 +348,7 @@ function FeedCard({ post }: { post: Post }) {
   );
 }
 
-function FullscreenPhoto({ post, authorHandle, liked, saved, likeCount, onClose, onLike, onSave, onComments }: { post: Post; authorHandle: string; liked: boolean; saved: boolean; likeCount: number; onClose: () => void; onLike: () => void; onSave: () => void; onComments: () => void }) {
+function FullscreenPhoto({ post, initialIndex, authorHandle, liked, saved, likeCount, onClose, onLike, onSave, onComments }: { post: Post; initialIndex: number; authorHandle: string; liked: boolean; saved: boolean; likeCount: number; onClose: () => void; onLike: () => void; onSave: () => void; onComments: () => void }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const startY = useRef<number | null>(null);
   useEffect(() => {
@@ -365,9 +359,9 @@ function FullscreenPhoto({ post, authorHandle, liked, saved, likeCount, onClose,
     window.addEventListener("keydown", key);
     return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", key); };
   }, [onClose]);
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex flex-col bg-foreground text-background"
+      className="fixed inset-0 z-[80] flex h-dvh flex-col bg-foreground text-background"
       role="dialog"
       aria-modal="true"
       aria-label={`photo by ${authorHandle}`}
@@ -380,9 +374,9 @@ function FullscreenPhoto({ post, authorHandle, liked, saved, likeCount, onClose,
         <p className="lowkey text-sm font-bold">@{authorHandle}</p>
         <Button size="icon" variant="secondary" onClick={onClose} aria-label="close full-screen photo"><X /></Button>
       </div>
-      <button type="button" className="min-h-0 flex-1" onClick={onClose} aria-label="close photo">
-        <img src={post.mediaUrl ?? ""} alt={post.caption} className="size-full object-contain" />
-      </button>
+      <div className="min-h-0 flex-1">
+        <PhotoCarousel urls={post.mediaUrls?.length ? post.mediaUrls : post.mediaUrl ? [post.mediaUrl] : []} caption={post.caption} initialIndex={initialIndex} fullscreen />
+      </div>
       <div className="shrink-0 border-t border-background/20 bg-foreground px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {post.caption && post.caption !== "no caption" && (
           <p className="lowkey mb-3 text-sm">
@@ -396,7 +390,7 @@ function FullscreenPhoto({ post, authorHandle, liked, saved, likeCount, onClose,
           <Button variant="secondary" size="icon" onClick={onSave} aria-label={saved ? "remove bookmark" : "save photo"}><Bookmark className={saved ? "fill-primary text-primary" : ""}/></Button>
         </div>
       </div>
-    </div>
+    </div>, document.body,
   );
 }
 

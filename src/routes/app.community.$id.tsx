@@ -153,7 +153,7 @@ function CommunityPage() {
                     p.kind === "video" ? (
                       <video src={p.mediaUrl} controls playsInline className="max-h-96 w-full rounded-2xl bg-muted object-cover" />
                     ) : (
-                      <Poster hue={p.posterHue} caption={p.caption} mediaUrl={p.mediaUrl} />
+                      <Poster hue={p.posterHue} caption={p.caption} mediaUrl={p.mediaUrl} mediaUrls={p.mediaUrls ?? []} />
                     )
                   )}
                   <p className="lowkey text-sm">

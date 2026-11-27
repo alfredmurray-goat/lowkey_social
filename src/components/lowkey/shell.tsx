@@ -17,6 +17,7 @@ import logoAsset from "@/assets/lowkey-logo.png.asset.json";
 import { ReadAloud } from "@/components/lowkey/readaloud";
 import { CaptionText } from "@/components/lowkey/caption-text";
 import { ScribbleLoader } from "@/components/lowkey/scribble-loader";
+import { PhotoCarousel } from "@/components/lowkey/photo-carousel";
 
 export function Avatar({
   hue,
@@ -69,12 +70,15 @@ export function Poster({
   caption,
   aspect = "square",
   mediaUrl,
+  mediaUrls,
 }: {
   hue: number;
   caption: string;
   aspect?: "square" | "tall";
   mediaUrl?: string | null;
+  mediaUrls?: string[];
 }) {
+  if (mediaUrls && mediaUrls.length > 1) return <PhotoCarousel urls={mediaUrls} caption={caption} />;
   if (mediaUrl) {
     return (
       <img

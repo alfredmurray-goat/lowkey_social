@@ -169,15 +169,27 @@ export function MediaStudio() {
     setPosting(true); setStep("publish"); setRenderProgress(0); setUploadProgress(0);
     try {
       let mediaPath: string | null = null;
+      const mediaPaths: string[] = [];
       const firstClip = clips[0];
       if (firstClip) {
-        const finalFile = kind === "video" ? await renderVideo(clips.filter((c) => c.kind === "video"), adjustments, setRenderProgress) : await renderPhoto(firstClip.file, adjustments);
+        if (kind === "video") {
+          const finalFile = await renderVideo(clips.filter((c) => c.kind === "video"), adjustments, setRenderProgress);
+          const uploaded = await uploadMedia(finalFile, setUploadProgress);
+          if (!uploaded) throw new Error("upload failed");
+          mediaPath = uploaded.path;
+        } else {
+          for (const [index, item] of clips.entries()) {
+            const finalFile = await renderPhoto(item.file, adjustments);
+            setRenderProgress(Math.round((index + 1) / clips.length * 100));
+            const uploaded = await uploadMedia(finalFile, (progress) => setUploadProgress(Math.round((index + progress / 100) / clips.length * 100)));
+            if (!uploaded) throw new Error("upload failed");
+            mediaPaths.push(uploaded.path);
+          }
+          mediaPath = mediaPaths[0] ?? null;
+        }
         setRenderProgress(100);
-        const uploaded = await uploadMedia(finalFile, setUploadProgress);
-        if (!uploaded) throw new Error("upload failed");
-        mediaPath = uploaded.path;
       }
-      const id = await createPost({ kind, title: title || null, caption: caption.trim() || "no caption", mediaUrl: mediaPath, topic, communityId, songTitle: song?.title ?? null, songArtist: song?.artist ?? null, audioPath: song?.storagePath ?? song?.url ?? null, editManifest: adjustments });
+      const id = await createPost({ kind, title: title || null, caption: caption.trim() || "no caption", mediaUrl: mediaPath, mediaPaths, topic, communityId, songTitle: song?.title ?? null, songArtist: song?.artist ?? null, audioPath: song?.storagePath ?? song?.url ?? null, editManifest: adjustments });
       if (!id) throw new Error("verify your age before posting");
       if (draftId) await supabase.from("post_drafts").delete().eq("id", draftId);
       toast.success("posted");

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bookmark, Clapperboard, X } from "lucide-react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { AppScreen, Avatar, Poster } from "@/components/lowkey/shell";
 import { CaptionText } from "@/components/lowkey/caption-text";
 import { useLowkey } from "@/lib/lowkey/store";
@@ -120,7 +121,7 @@ function SavedPage() {
         </div>
       )}
 
-      {openPost && (
+      {openPost && createPortal(
         <div
           className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/60 p-4 backdrop-blur-xs"
           onClick={() => setOpenPost(null)}
@@ -138,7 +139,7 @@ function SavedPage() {
             {openPost.kind === "video" && openPost.mediaUrl ? (
               <video src={openPost.mediaUrl} controls playsInline className="max-h-96 w-full rounded-2xl bg-muted object-cover" />
             ) : (
-              <Poster hue={openPost.posterHue} caption={openPost.mediaUrl ? "" : openPost.caption} mediaUrl={openPost.mediaUrl} />
+              <Poster hue={openPost.posterHue} caption={openPost.mediaUrl ? "" : openPost.caption} mediaUrl={openPost.mediaUrl} mediaUrls={openPost.mediaUrls ?? []} />
             )}
             {openPost.caption && (
               <p className="lowkey mt-3 text-sm">
@@ -146,7 +147,7 @@ function SavedPage() {
               </p>
             )}
           </div>
-        </div>
+        </div>, document.body,
       )}
     </AppScreen>
   );

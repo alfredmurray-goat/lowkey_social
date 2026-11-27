@@ -1,6 +1,7 @@
 # lowkey_social roadmap
 
 ## done
+- Multi-photo uploads save all edited images; swipeable carousels with arrows, dots and counts in feeds, communities, hashtags, saved viewers and full-screen photos.
 - 6 screens + search/settings on a localStorage store mirroring the planned schema
 - age band split (under 18 / 18+), streaks, daily limit
 - logo, favicon, beta labelling, feedback email (alfredcasper1010@gmail.com)
