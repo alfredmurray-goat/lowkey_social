@@ -1,6 +1,7 @@
 import type { Post, PostHashtag } from "./types";
 
 const TAG_RE = /#([\p{L}\p{N}_-]{2,32})/gu;
+const MENTION_RE = /(?:^|[\s([{"'])@([a-z0-9_.-]{2,30})\b/gi;
 const AFFINITY_KEY = "lowkey.tagAffinity.v1";
 
 export type TagAffinityMap = Record<string, { score: number; updatedAt: number }>;
@@ -12,6 +13,16 @@ export function extractTagsFromCaption(text: string): string[] {
   if (!text) return [];
   const out = new Set<string>();
   for (const m of text.matchAll(TAG_RE)) {
+    const raw = m[1];
+    if (raw) out.add(raw.toLowerCase());
+  }
+  return [...out];
+}
+
+export function extractMentions(text: string): string[] {
+  if (!text) return [];
+  const out = new Set<string>();
+  for (const m of text.matchAll(MENTION_RE)) {
     const raw = m[1];
     if (raw) out.add(raw.toLowerCase());
   }

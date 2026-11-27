@@ -15,6 +15,7 @@ import type { Json } from "@/integrations/supabase/types";
 import { parseInstagramExport } from "./instagram";
 import { prepareImage } from "./image";
 import {
+  extractMentions,
   getPostTags,
   rankFeedPosts,
   readTagAffinity,
@@ -769,6 +770,33 @@ return {
 
   /* ---------- content ---------- */
 
+  /** notify any @mentioned handles in the same age band */
+  const notifyMentions = useCallback(
+    async (text: string, postId?: string | null, excludeIds?: string[]) => {
+      const id = meIdRef.current;
+      if (!id || !text) return;
+      const handles = extractMentions(text);
+      if (handles.length === 0) return;
+      const skip = new Set<string>([id, ...(excludeIds ?? [])]);
+      const recipients = state.profiles.filter(
+        (p) =>
+          !skip.has(p.id) &&
+          handles.includes(p.handle.toLowerCase()) &&
+          (!me?.ageBand || p.ageBand === me.ageBand),
+      );
+      if (recipients.length === 0) return;
+      await supabase.from("notifications").insert(
+        recipients.map((r) => ({
+          recipient_id: r.id,
+          actor_id: id,
+          kind: "mention" as const,
+          post_id: postId ?? null,
+        })),
+      );
+    },
+    [me?.ageBand, state.profiles],
+  );
+
   const createPost = useCallback(
 async (input: {
       kind: PostKind;
@@ -816,10 +844,11 @@ title: input.title?.trim() ? input.title.trim().toLowerCase() : null,
           return null;
         }
       }
+      await notifyMentions(`${input.title ?? ""} ${input.caption}`, data.id);
       await refresh();
       return (data as Row)['id'] as string;
     },
-    [me, refresh],
+    [me, notifyMentions, refresh],
   );
 
   /* ---------- communities ---------- */
@@ -1032,6 +1061,7 @@ title: input.title?.trim() ? input.title.trim().toLowerCase() : null,
         recordTagSignal(getPostTags(post, state.hashtags), 2.5);
         await notify(post.authorId, "comment", postId);
       }
+      await notifyMentions(text, postId, post ? [post.authorId] : undefined);
     },
     [notify, state.posts, state.hashtags],
   );
@@ -1208,9 +1238,10 @@ title: input.title?.trim() ? input.title.trim().toLowerCase() : null,
         .update({ last_read_at: new Date().toISOString() })
         .eq("conversation_id", conversationId)
         .eq("profile_id", id);
+      await notifyMentions(body.trim(), null);
 await refresh();
     },
-    [refresh, state.streaks],
+    [notifyMentions, refresh, state.streaks],
   );
 
   const sendPhoto = useCallback(

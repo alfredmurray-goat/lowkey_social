@@ -274,7 +274,7 @@ function FeedCard({ post }: { post: Post }) {
           <div className="min-w-0 flex-1">
             {post.title && (
               <h2 className="lowkey mb-1.5 text-base leading-snug font-extrabold break-words">
-                {post.title}
+                <CaptionText text={post.title} />
               </h2>
             )}
             {post.mediaUrl ? (
@@ -440,8 +440,14 @@ function FeedPage() {
               <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">
                 <Megaphone className="size-3" /> from lowkey_social
               </span>
-              {sp.title && <p className="lowkey mt-2 text-base font-extrabold">{sp.title}</p>}
-              <p className="lowkey mt-1 text-sm text-foreground/90">{sp.body}</p>
+              {sp.title && (
+                <p className="lowkey mt-2 text-base font-extrabold">
+                  <CaptionText text={sp.title} />
+                </p>
+              )}
+              <p className="lowkey mt-1 text-sm text-foreground/90">
+                <CaptionText text={sp.body} />
+              </p>
               {sp.mediaUrl && (
                 <img
                   src={sp.mediaUrl}

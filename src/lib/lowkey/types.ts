@@ -178,7 +178,7 @@ export interface Streak {
   lastActiveDay: string;
 }
 
-export type NotificationKind = "follow" | "like" | "comment";
+export type NotificationKind = "follow" | "like" | "comment" | "mention";
 
 export interface Notif {
   id: string;

@@ -1,15 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
-import { GatewayError, editImage, generateResponse } from "@lovable.dev/ai-gateway";
+import { GatewayError, editImage } from "@lovable.dev/ai-gateway";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
-  extractResponseText,
   isAiFeatureEnabled,
   normalizeAiSettings,
   sanitizeCaptionSuggestions,
   type AiFeatureKey,
 } from "./ai-settings";
+import { GROQ_TEXT_MODEL, GROQ_VISION_MODEL, GroqError, groqChatJson } from "./groq.server";
 
 const DAILY_LIMITS: Record<AiFeatureKey, number> = {
   captions: 25,
@@ -20,6 +20,15 @@ const DAILY_LIMITS: Record<AiFeatureKey, number> = {
 };
 
 function friendlyGatewayError(err: unknown): string {
+  if (err instanceof GroqError) {
+    if (err.code === "missing_key" || err.code === "unauthorized") {
+      return "groq ai key isn't set up right — check your settings";
+    }
+    if (err.code === "rate_limited") {
+      return "too many ai requests right now — give it a minute";
+    }
+    return "ai had a hiccup — try again in a sec";
+  }
   if (err instanceof GatewayError) {
     if (err.code === "payment_required") {
       return "ai credits are out right now — try again later";
@@ -95,56 +104,26 @@ export const suggestCaptionsFn = createServerFn({ method: "POST" })
 
     const cityPart = gate.city ? `user city: ${gate.city}.` : "";
     const hintPart = data.hint ? `user draft text: "${data.hint}".` : "";
-    const userContent: Array<
-      | { type: "input_text"; text: string }
-      | { type: "input_image"; image_url: string; detail: "low" }
-    > = [
-      {
-        type: "input_text",
-        text: `pitch 3 short effortless lowercase captions and 3-5 lowercase hashtags (include a local city tag if relevant). ${cityPart} ${hintPart}`.trim(),
-      },
-    ];
-    if (data.imageDataUrl) {
-      userContent.push({
-        type: "input_image",
-        image_url: data.imageDataUrl,
-        detail: "low",
-      });
-    }
+    const promptText = `pitch 3 short effortless lowercase captions and 3-5 lowercase hashtags (include a local city tag if relevant). respond as JSON with {"captions": string[], "tags": string[]}. ${cityPart} ${hintPart}`.trim();
+    const userContent = data.imageDataUrl
+      ? [
+          { type: "text" as const, text: promptText },
+          { type: "image_url" as const, image_url: { url: data.imageDataUrl } },
+        ]
+      : promptText;
 
     try {
-      const res = await generateResponse({
-        model: "openai/gpt-6-astra",
-        input: [
+      const parsed = await groqChatJson<{ captions?: unknown; tags?: unknown }>({
+        model: data.imageDataUrl ? GROQ_VISION_MODEL : GROQ_TEXT_MODEL,
+        messages: [
           {
             role: "system",
             content:
-              "you write ultra-chill lowercase captions for lowkey_social, a friendly app for teens and young people. rules: always lowercase, short (3-8 words), natural and effortless, never cheesy or try-hard, no emoji spam (0-1 emoji max), never comment on people's faces, bodies, or appearance.",
+              'you write ultra-chill lowercase captions for lowkey_social, a friendly app for teens and young people. rules: always lowercase, short (3-8 words), natural and effortless, never cheesy or try-hard, no emoji spam (0-1 emoji max), never comment on people\'s faces, bodies, or appearance. always return valid JSON: {"captions": [...], "tags": [...]}.',
           },
           { role: "user", content: userContent },
         ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "caption_suggestions",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                captions: { type: "array", items: { type: "string" } },
-                tags: { type: "array", items: { type: "string" } },
-              },
-              required: ["captions", "tags"],
-              additionalProperties: false,
-            },
-          },
-        },
       });
-
-      const parsed = JSON.parse(extractResponseText(res.output) || "{}") as {
-        captions?: unknown;
-        tags?: unknown;
-      };
       const clean = sanitizeCaptionSuggestions(parsed);
       return { ok: true as const, ...clean };
     } catch (err) {
@@ -192,37 +171,20 @@ export const summarizeChatFn = createServerFn({ method: "POST" })
     }
 
     try {
-      const res = await generateResponse({
-        model: "openai/gpt-6-astra",
-        input: [
+      const parsed = await groqChatJson<{ bullets?: unknown }>({
+        model: GROQ_TEXT_MODEL,
+        messages: [
           {
             role: "system",
             content:
-              "summarize a class or friend group chat into 3 short lowercase bullets: plans/meetups, homework/school stuff, and anything directed at the reader. keep each bullet under 14 words, chill tone, no gossip or drama.",
+              'summarize a class or friend group chat into 3 short lowercase bullets: plans/meetups, homework/school stuff, and anything directed at the reader. keep each bullet under 14 words, chill tone, no gossip or drama. always return valid JSON: {"bullets": ["...", "...", "..."]}.',
           },
           {
             role: "user",
             content: `reader: ${me?.display_name ?? ""} (@${me?.handle ?? ""})\nmessages:\n${textLines.join("\n")}`,
           },
         ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "chat_tldr",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                bullets: { type: "array", items: { type: "string" } },
-              },
-              required: ["bullets"],
-              additionalProperties: false,
-            },
-          },
-        },
       });
-
-      const parsed = JSON.parse(extractResponseText(res.output) || "{}") as { bullets?: unknown };
       const bullets = (Array.isArray(parsed.bullets) ? parsed.bullets : [])
         .filter((b): b is string => typeof b === "string" && b.trim().length > 0)
         .map((b) => b.trim().toLowerCase().slice(0, 140))

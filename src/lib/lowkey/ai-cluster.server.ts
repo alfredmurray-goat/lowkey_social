@@ -1,6 +1,5 @@
-import { GatewayError, generateResponse } from "@lovable.dev/ai-gateway";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { extractResponseText } from "./ai-settings";
+import { GROQ_TEXT_MODEL, GroqError, groqChatJson } from "./groq.server";
 import type { AgeBand } from "./types";
 
 const JOB_NAME = "cluster_tag_hubs";
@@ -69,49 +68,20 @@ export async function runTagHubClustering(opts?: {
 
       if (topTags.length < 3) continue;
 
-      const response = await generateResponse({
-        model: "openai/gpt-6-astra",
-        input: [
+      const parsed = await groqChatJson<{ hubs?: { name: string; tags: string[] }[] }>({
+        model: GROQ_TEXT_MODEL,
+        messages: [
           {
             role: "system",
             content:
-              "group related hashtags from a chill local social app into short lowercase local hubs (e.g. cph, københavn, kbh7thgrade -> hub 'kbh'). only group tags that clearly belong together (same city, school, or topic). each hub needs at least 2 tags from the list. max 8 hubs. lowercase only.",
+              'group related hashtags from a chill local social app into short lowercase local hubs (e.g. cph, københavn, kbh7thgrade -> hub "kbh"). only group tags that clearly belong together (same city, school, or topic). each hub needs at least 2 tags from the list. max 8 hubs. lowercase only. return valid JSON: {"hubs": [{"name": string, "tags": string[]}]}.',
           },
           {
             role: "user",
             content: `hashtags: ${topTags.map((t) => `#${t.tag} (${t.count})`).join(", ")}`,
           },
         ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "tag_hubs",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                hubs: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string" },
-                      tags: { type: "array", items: { type: "string" } },
-                    },
-                    required: ["name", "tags"],
-                    additionalProperties: false,
-                  },
-                },
-              },
-              required: ["hubs"],
-              additionalProperties: false,
-            },
-          },
-        },
       });
-
-      const text = extractResponseText(response.output);
-      const parsed = JSON.parse(text) as { hubs?: { name: string; tags: string[] }[] };
       const validTags = new Set(topTags.map((t) => t.tag));
       const hubs = (parsed.hubs ?? [])
         .map((h) => ({
@@ -151,13 +121,9 @@ export async function runTagHubClustering(opts?: {
   } catch (err) {
     let shouldPause = false;
     let reason = "clustering failed";
-    if (err instanceof GatewayError) {
+    if (err instanceof GroqError) {
       reason = `${err.code}: ${err.message}`.slice(0, 200);
-      if (
-        err.code === "payment_required" ||
-        err.code === "permission_denied" ||
-        err.code === "rate_limited"
-      ) {
+      if (err.code === "missing_key" || err.code === "unauthorized" || err.code === "rate_limited") {
         shouldPause = true;
       }
     } else if (err instanceof Error) {

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { AppScreen, Avatar, StreakPill } from "@/components/lowkey/shell";
+import { CaptionText } from "@/components/lowkey/caption-text";
 import { ChatTldrBar } from "@/components/lowkey/chat-tldr-bar";
 import { isAiFeatureEnabled } from "@/lib/lowkey/ai-settings";
 import { useLowkey } from "@/lib/lowkey/store";
@@ -177,7 +178,11 @@ function ThreadPage() {
                             className="max-h-72 w-full max-w-56 rounded-2xl object-cover"
                           />
                         )}
-                        {m.body && <p className="break-words">{m.body}</p>}
+                        {m.body && (
+                          <p className="break-words">
+                            <CaptionText text={m.body} />
+                          </p>
+                        )}
                         {mine && (
                           <button
                             type="button"

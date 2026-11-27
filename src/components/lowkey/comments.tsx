@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { X, Send } from "lucide-react";
-import { useEffect, useState } from "react";
+import { X, Send, CornerDownRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CaptionText } from "@/components/lowkey/caption-text";
 import { Avatar } from "@/components/lowkey/shell";
 import { useLowkey } from "@/lib/lowkey/store";
 
@@ -15,7 +16,11 @@ function ago(iso: string) {
 export function CommentsSheet({ postId, onClose }: { postId: string; onClose: () => void }) {
   const { state, me, addComment } = useLowkey();
   const [draft, setDraft] = useState("");
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const post = state.posts.find((p) => p.id === postId);
 
   const comments = state.comments
     .filter((c) => c.postId === postId)
@@ -32,8 +37,23 @@ export function CommentsSheet({ postId, onClose }: { postId: string; onClose: ()
     if (!text) return;
     setSending(true);
     setDraft("");
+    setReplyingTo(null);
     await addComment(postId, text);
     setSending(false);
+  };
+
+  const startReply = (handle: string) => {
+    const clean = handle.toLowerCase();
+    const prefix = `@${clean} `;
+    setReplyingTo(clean);
+    setDraft((prev) => {
+      const trimmed = prev.trimStart();
+      if (trimmed.toLowerCase().startsWith(prefix)) return prev;
+      return `${prefix}${trimmed}`;
+    });
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
   };
 
   return (
@@ -61,6 +81,7 @@ export function CommentsSheet({ postId, onClose }: { postId: string; onClose: ()
           )}
           {comments.map((c) => {
             const author = state.profiles.find((p) => p.id === c.authorId);
+            const isOp = Boolean(post && c.authorId === post.authorId);
             return (
               <div key={c.id} className="flex gap-3">
                 <Avatar
@@ -82,15 +103,45 @@ export function CommentsSheet({ postId, onClose }: { postId: string; onClose: ()
                     ) : (
                       <span>someone</span>
                     )}
+                    {isOp && (
+                      <span className="lowkey rounded-full bg-primary px-1.5 py-0.5 text-[10px] leading-none font-extrabold text-primary-foreground">
+                        op
+                      </span>
+                    )}
                     <span className="font-normal text-muted-foreground">{ago(c.createdAt)}</span>
                   </p>
-                  <p className="lowkey mt-0.5 text-sm break-words">{c.body}</p>
+                  <p className="lowkey mt-0.5 text-sm break-words">
+                    <CaptionText text={c.body} />
+                  </p>
+                  {author && (
+                    <button
+                      type="button"
+                      onClick={() => startReply(author.handle)}
+                      className="lowkey mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-muted-foreground hover:text-foreground"
+                    >
+                      <CornerDownRight className="size-3" />
+                      reply
+                    </button>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
 
+        {replyingTo && (
+          <div className="flex items-center justify-between border-t border-border bg-primary-soft/50 px-4 py-1.5 text-xs">
+            <span className="lowkey font-semibold text-foreground">replying to @{replyingTo}</span>
+            <button
+              type="button"
+              onClick={() => setReplyingTo(null)}
+              aria-label="cancel reply"
+              className="rounded-full p-1 text-muted-foreground hover:bg-muted"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        )}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -100,11 +151,12 @@ export function CommentsSheet({ postId, onClose }: { postId: string; onClose: ()
         >
           <Avatar hue={me?.avatarHue ?? 60} label={me?.displayName ?? "me"} src={me?.avatarUrl ?? null} size={30} />
           <input
+            ref={inputRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             maxLength={200}
             autoFocus
-            placeholder="say something"
+            placeholder={replyingTo ? `reply to @${replyingTo}` : "say something"}
             className="lowkey min-w-0 flex-1 rounded-full bg-muted px-4 py-2.5 text-sm outline-none"
           />
           <button

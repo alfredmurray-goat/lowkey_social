@@ -148,7 +148,11 @@ function CommunityPage() {
                     <span className="lowkey text-sm font-bold">{author.displayName}</span>
                     <span className="lowkey text-xs text-muted-foreground">@{author.handle}</span>
                   </Link>
-                  {p.title && <p className="lowkey text-base font-bold">{p.title}</p>}
+                  {p.title && (
+                    <p className="lowkey text-base font-bold">
+                      <CaptionText text={p.title} />
+                    </p>
+                  )}
                   {p.mediaUrl && (
                     p.kind === "video" ? (
                       <video src={p.mediaUrl} controls playsInline className="max-h-96 w-full rounded-2xl bg-muted object-cover" />

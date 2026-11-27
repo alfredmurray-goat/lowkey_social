@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, Heart, MessageCircle, UserPlus } from "lucide-react";
+import { AtSign, Bell, Heart, MessageCircle, UserPlus } from "lucide-react";
 import { useEffect } from "react";
 import { AppScreen, Avatar } from "@/components/lowkey/shell";
 import { useLowkey } from "@/lib/lowkey/store";
@@ -90,9 +90,30 @@ function NotificationsPage() {
                       ? "followed you"
                       : n.kind === "like"
                         ? "liked your post"
-                        : "commented on your post";
+                        : n.kind === "mention"
+                          ? n.postId
+                            ? "mentioned you"
+                            : "mentioned you in chat"
+                          : "commented on your post";
                   const BadgeIcon =
-                    n.kind === "follow" ? UserPlus : n.kind === "like" ? Heart : MessageCircle;
+                    n.kind === "follow"
+                      ? UserPlus
+                      : n.kind === "like"
+                        ? Heart
+                        : n.kind === "mention"
+                          ? AtSign
+                          : MessageCircle;
+                  const targetPost = n.postId ? state.posts.find((p) => p.id === n.postId) : null;
+                  const rowLink =
+                    n.kind === "follow"
+                      ? null
+                      : targetPost
+                        ? targetPost.kind === "video"
+                          ? ("/app/videos" as const)
+                          : ("/app" as const)
+                        : n.kind === "mention"
+                          ? ("/app/chats" as const)
+                          : ("/app" as const);
                   return (
                     <li
                       key={n.id}
@@ -122,7 +143,13 @@ function NotificationsPage() {
                           >
                             @{actor.handle}
                           </Link>{" "}
-                          {text}
+                          {rowLink ? (
+                            <Link to={rowLink} className="hover:underline">
+                              {text}
+                            </Link>
+                          ) : (
+                            text
+                          )}
                         </p>
                         <p className="lowkey mt-0.5 text-xs text-muted-foreground">{ago(n.createdAt)} ago</p>
                       </div>
