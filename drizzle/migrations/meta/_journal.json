@@ -141,6 +141,20 @@
       "when": 1795788367528,
       "tag": "0019_ai_features_and_tag_hubs",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1795805506486,
+      "tag": "0020_nest_comment_replies",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795805518831,
+      "tag": "0021_index_comment_reply_threads",
+      "breakpoints": true
     }
   ]
 }

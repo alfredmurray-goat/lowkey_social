@@ -142,7 +142,7 @@ createPost: (input: {
   deleteSuperPost: (id: string) => Promise<void>;
   toggleRepost: (postId: string) => Promise<void>;
   toggleLike: (postId: string) => Promise<void>;
-  addComment: (postId: string, body: string) => Promise<void>;
+  addComment: (postId: string, body: string, parentId?: string | null) => Promise<void>;
   toggleFollow: (profileId: string) => Promise<void>;
   toggleBookmark: (postId: string) => Promise<void>;
   markNotificationsRead: () => Promise<void>;
@@ -492,6 +492,7 @@ posts: postRows.map((r) => ({
         postId: r['post_id'] as string,
         authorId: r['author_id'] as string,
         body: r['body'] as string,
+        parentId: (r['parent_id'] as string | null) ?? null,
         createdAt: r['created_at'] as string,
       })),
       likes: ((likesRes.data ?? []) as Row[]).map((r) => ({
@@ -1032,14 +1033,14 @@ title: input.title?.trim() ? input.title.trim().toLowerCase() : null,
   );
 
   const addComment = useCallback(
-    async (postId: string, body: string) => {
+    async (postId: string, body: string, parentId: string | null = null) => {
       const id = meIdRef.current;
       if (!id || !body.trim()) return;
       const text = body.trim().toLowerCase();
       const { data, error } = await supabase
         .from("post_comments")
-        .insert({ post_id: postId, author_id: id, body: text })
-        .select("id, created_at")
+        .insert({ post_id: postId, author_id: id, body: text, parent_id: parentId })
+        .select("id, created_at, parent_id")
         .maybeSingle();
       if (error || !data) return;
       const row = data as Row;
@@ -1052,6 +1053,7 @@ title: input.title?.trim() ? input.title.trim().toLowerCase() : null,
             postId,
             authorId: id,
             body: text,
+            parentId: (row['parent_id'] as string | null) ?? null,
             createdAt: row['created_at'] as string,
           },
         ],

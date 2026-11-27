@@ -147,6 +147,8 @@ export interface Comment {
   postId: string;
   authorId: string;
   body: string;
+  /** Null for a top-level comment; otherwise the comment this replies to. */
+  parentId: string | null;
   createdAt: string;
 }
 
