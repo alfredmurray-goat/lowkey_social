@@ -5,7 +5,7 @@ import loaderAsset from "@/assets/lowkey-loader.webp.asset.json";
  * User's hand-drawn scribble loading animation with background removed.
  */
 export function ScribbleLoader({
-  size = 64,
+  size,
   label,
   fullScreen = false,
   className,
@@ -15,6 +15,7 @@ export function ScribbleLoader({
   fullScreen?: boolean;
   className?: string;
 }) {
+  const drawingSize = size ?? (fullScreen ? 208 : 144);
   const content = (
     <div
       role="status"
@@ -24,11 +25,11 @@ export function ScribbleLoader({
       <img
         src={loaderAsset.url}
         alt=""
-        width={size}
-        height={size}
+        width={drawingSize}
+        height={drawingSize}
         aria-hidden="true"
         className="object-contain select-none"
-        style={{ width: size, height: size }}
+        style={{ width: drawingSize, height: drawingSize }}
       />
       {label && <span className="lowkey text-xs font-semibold text-muted-foreground">{label}</span>}
       <span className="sr-only">{label ?? "loading"}</span>
