@@ -671,12 +671,6 @@ function SettingsPage() {
                 onChange={(v) => saveAi({ captions: v })}
               />
               <Toggle
-                label="doodle me avatar"
-                hint="turn a selfie into a drawn profile picture without saving the photo"
-                value={me.aiSettings.doodle}
-                onChange={(v) => saveAi({ doodle: v })}
-              />
-              <Toggle
                 label="chat tldr"
                 hint="3-bullet catch-up when a group chat has 20+ unread messages"
                 value={me.aiSettings.tldr}

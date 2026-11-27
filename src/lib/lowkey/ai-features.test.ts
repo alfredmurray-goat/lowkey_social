@@ -11,7 +11,6 @@ describe("ai settings gating", () => {
   it("disables every feature when master switch is off", () => {
     const off = { ...DEFAULT_AI_SETTINGS, enabled: false };
     expect(isAiFeatureEnabled(off, "captions")).toBe(false);
-    expect(isAiFeatureEnabled(off, "doodle")).toBe(false);
     expect(isAiFeatureEnabled(off, "tldr")).toBe(false);
     expect(isAiFeatureEnabled(off, "hubs")).toBe(false);
     expect(isAiFeatureEnabled(off, "beatSync")).toBe(false);

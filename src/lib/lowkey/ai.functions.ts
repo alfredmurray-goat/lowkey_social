@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { GatewayError, editImage } from "@lovable.dev/ai-gateway";
+import { GatewayError } from "@lovable.dev/ai-gateway";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -14,7 +14,6 @@ import { GROQ_TEXT_MODEL, GROQ_VISION_MODEL, GroqError, groqChatJson } from "./g
 const DAILY_LIMITS: Record<AiFeatureKey, number> = {
   captions: 25,
   tldr: 20,
-  doodle: 6,
   hubs: 10,
   beatSync: 100,
 };
@@ -191,57 +190,6 @@ export const summarizeChatFn = createServerFn({ method: "POST" })
         .slice(0, 3);
 
       return { ok: true as const, bullets };
-    } catch (err) {
-      return { ok: false as const, error: friendlyGatewayError(err) };
-    }
-  });
-
-export const generateDoodleAvatarFn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: { imageDataUrl: string }) => ({
-    imageDataUrl:
-      typeof input.imageDataUrl === "string" && input.imageDataUrl.startsWith("data:image/")
-        ? input.imageDataUrl.slice(0, 4_000_000)
-        : "",
-  }))
-  .handler(async ({ data, context }) => {
-    if (!data.imageDataUrl) return { ok: false as const, error: "please pick a photo first" };
-    const gate = await checkAiGate(context.supabase, context.userId, "doodle");
-    if (!gate.ok) return { ok: false as const, error: gate.error };
-
-    try {
-      const comma = data.imageDataUrl.indexOf(",");
-      const header = data.imageDataUrl.slice(0, comma);
-      const mimeMatch = header.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64$/);
-      const mime = mimeMatch?.[1] ?? "image/jpeg";
-      const b64 = data.imageDataUrl.slice(comma + 1);
-      const binary = atob(b64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const blob = new Blob([bytes], { type: mime });
-
-      const res = await editImage({
-        model: "openai/gpt-image-2.5-sunburst",
-        image: blob,
-        prompt:
-          "Turn this person into a cute, friendly, stylized hand-drawn doodle avatar illustration. Thick charcoal ink outlines, warm sunny yellow and off-white accents, minimal flat colors, playful scribble vibe, centered head-and-shoulders portrait, no text, no real-photo look, privacy-preserving cartoon character.",
-        n: 2,
-        size: "512x512",
-        output_format: "png",
-      });
-
-      const options: string[] = [];
-      for (const item of res.data ?? []) {
-        if (item.b64_json) {
-          options.push(`data:image/png;base64,${item.b64_json}`);
-        } else if (item.url) {
-          options.push(item.url);
-        }
-      }
-      if (options.length === 0) {
-        return { ok: false as const, error: "could not draw your doodle — try another photo" };
-      }
-      return { ok: true as const, options: options.slice(0, 2) };
     } catch (err) {
       return { ok: false as const, error: friendlyGatewayError(err) };
     }

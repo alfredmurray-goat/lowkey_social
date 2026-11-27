@@ -2,7 +2,6 @@ export interface AiSettings {
   /** Master switch — when false, every AI feature is off */
   enabled: boolean;
   captions: boolean;
-  doodle: boolean;
   tldr: boolean;
   hubs: boolean;
   beatSync: boolean;
@@ -13,7 +12,6 @@ export type AiFeatureKey = Exclude<keyof AiSettings, "enabled">;
 export const DEFAULT_AI_SETTINGS: AiSettings = {
   enabled: true,
   captions: true,
-  doodle: true,
   tldr: true,
   hubs: true,
   beatSync: true,
@@ -25,7 +23,6 @@ export function normalizeAiSettings(raw: unknown): AiSettings {
   return {
     enabled: typeof r["enabled"] === "boolean" ? r["enabled"] : true,
     captions: typeof r["captions"] === "boolean" ? r["captions"] : true,
-    doodle: typeof r["doodle"] === "boolean" ? r["doodle"] : true,
     tldr: typeof r["tldr"] === "boolean" ? r["tldr"] : true,
     hubs: typeof r["hubs"] === "boolean" ? r["hubs"] : true,
     beatSync: typeof r["beatSync"] === "boolean" ? r["beatSync"] : true,
